@@ -6,12 +6,16 @@ const map = document.querySelector("#map");
 const mapFrame = document.querySelector(".map-frame");
 
 function openFlyout() {
-  flyout.showModal();
+  flyout.show();
+  document.body.classList.add("json-flyout-open");
+  openButton.setAttribute("aria-expanded", "true");
   document.querySelector("#world-data").focus();
 }
 
 function closeFlyout() {
   flyout.close();
+  document.body.classList.remove("json-flyout-open");
+  openButton.setAttribute("aria-expanded", "false");
   openButton.focus();
 }
 
@@ -27,8 +31,11 @@ applyButton.addEventListener("click", () => {
   updateMapAspectRatio();
   closeFlyout();
 });
-flyout.addEventListener("click", event => {
-  if (event.target === flyout) closeFlyout();
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape" && flyout.open) {
+    event.preventDefault();
+    closeFlyout();
+  }
 });
 
 new MutationObserver(updateMapAspectRatio).observe(map, { attributes: true, attributeFilter: ["viewBox"] });
