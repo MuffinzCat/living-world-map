@@ -24,6 +24,18 @@
           <p id="status" role="status" aria-live="polite">Loading sample world…</p>
         </div>
       </div>
+      <div class="toolbar" aria-label="Brush controls">
+        <button id="brush-mode" type="button" aria-pressed="false">Brush mode</button>
+        <label for="brush-type">Brush</label>
+        <select id="brush-type">
+          <option value="land">Land</option>
+          <option value="water">Water</option>
+          <option value="mountainRange">Mountain range</option>
+        </select>
+        <label for="brush-size">Size</label>
+        <input id="brush-size" type="range" min="10" max="120" step="2" value="40">
+        <output id="brush-size-value" for="brush-size">40</output>
+      </div>
       <div class="map-frame">
         <svg id="map" xmlns="http://<scrubbed-url-domain>/2000/svg" role="img" aria-label="Fantasy world map"></svg>
       </div>
