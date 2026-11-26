@@ -13,13 +13,25 @@ A lightweight, data-first fantasy map editor for worlds that grow during play.
 
 ## Run locally
 
-From the repository root, start any static file server. For example:
+From the repository root, run the dependency-free preview server:
 
 ```sh
-python3 -m http.server 8000
+node scripts/serve.mjs
 ```
 
-Then open `http://<scrubbed-url-domain>/%60.
+Then open `<scrubbed-url-domain> in a browser. The server disables browser caching, so refresh after each change to see the current files. Press `Ctrl+C` in the terminal to stop it.
+
+To use another port:
+
+```sh
+PORT=9000 node scripts/serve.mjs
+```
+
+In PowerShell:
+
+```powershell
+$env:PORT=9000; node scripts/serve.mjs
+```
 
 Opening `index.html` directly is not supported because the application loads JavaScript modules and JSON data.
 
@@ -29,6 +41,7 @@ Opening `index.html` directly is not supported because the application loads Jav
 - `styles/` contains presentation styles.
 - `src/` contains small browser-native JavaScript modules.
 - `data/` contains readable world files.
+- `scripts/serve.mjs` provides a dependency-free local preview server.
 - `tests/` contains dependency-free regression and smoke checks.
 
 ## Canonical world data
