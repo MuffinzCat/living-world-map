@@ -1,4 +1,5 @@
-import { renderBrushPreview, renderWorld } from "./map-renderer.js";
+import { renderBrushPreview } from "./brush-preview.js";
+import { renderWorld } from "./map-renderer.js";
 import { loadWorld, serialiseWorld } from "./world-data.js";
 
 const SVG_NS = "http://<scrubbed-url-domain>/2000/svg";
