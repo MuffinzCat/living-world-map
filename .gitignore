@@ -1,0 +1,15 @@
+# Operating systems
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Local servers and test output
+*.log
+coverage/
+
+# Optional Node tooling
+node_modules/

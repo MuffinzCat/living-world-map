@@ -1,0 +1,16 @@
+{
+  "formatVersion": 1,
+  "canvas": {
+    "width": 1200,
+    "height": 800
+  },
+  "terrain": [],
+  "settlements": [],
+  "roads": [],
+  "rivers": [],
+  "forests": [],
+  "mountains": [],
+  "mountainRanges": [],
+  "brushStrokes": [],
+  "notes": "The world is waiting to be drawn."
+}
