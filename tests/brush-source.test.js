@@ -43,6 +43,21 @@ test("live strokes use the canonical renderer and matching layer order", () => {
   assert.match(source, /target\.after\(liveLayer\)/);
 });
 
+test("terrain brushes use the intended map colours", () => {
+  assert.match(rendererSource, /water: "#355b57"/);
+  assert.match(rendererSource, /stroke\.type === "mountainRange" \? palette\.mountain : palette\[stroke\.type\]/);
+});
+
+test("mountain brush paints a continuous coloured path instead of symbols", () => {
+  const brushRenderer = rendererSource.slice(
+    rendererSource.indexOf("export function renderBrushStroke"),
+    rendererSource.indexOf("function drawNotes")
+  );
+  assert.match(brushRenderer, /append\(parent, "path"/);
+  assert.doesNotMatch(brushRenderer, /drawMountainRange/);
+  assert.match(brushRenderer, /"stroke-width": stroke\.size/);
+});
+
 test("brush outline uses half the selected stroke width as its radius", () => {
   assert.match(source, /Number\(brushSize\.value\) \/ 2/);
   assert.match(source, /class", "brush-outline"/);
