@@ -31,9 +31,26 @@ Opening `index.html` directly is not supported because the application loads Jav
 - `data/` contains readable world files.
 - `tests/` contains dependency-free regression and smoke checks.
 
-## World data
+## Canonical world data
 
-Worlds use versioned JSON. `formatVersion` allows older files to be migrated deliberately rather than silently breaking them. The canonical format will be documented as the editor is rebuilt.
+Worlds use versioned JSON with these top-level fields:
+
+- `formatVersion`: currently `1`
+- `canvas`: positive `width` and `height`
+- `terrain`: land and water polygons with point arrays
+- `settlements`: stable ID, name, type and x/y position
+- `roads`: settlement ID pairs in `from` and `to`
+- `rivers`: point paths
+- `forests` and `mountains`: x/y positions
+- `mountainRanges`: point paths with an optional positive size
+- `brushStrokes`: land, water or `mountainRange` strokes with size and points
+- `notes`: plain text shown with the map
+
+All points are readable `[x, y]` pairs. Loading always migrates into this canonical shape before validation and saving.
+
+### Legacy compatibility
+
+Unversioned prototype files are accepted and migrated. Recognised rivers, forests, mountains and mountain ranges that were stored in `terrain` move to their canonical collections. Terrain entries marked as brushes by `size`, `brush: true` or `kind: "brush"` move to `brushStrokes`. Legacy `mountain_range`, `mountain_ranges`, `brush_strokes` names are normalised. Unknown terrain entries stay in `terrain` so validation reports them rather than silently discarding data. Explicit future or unsupported `formatVersion` values are rejected.
 
 ## Development rules
 
