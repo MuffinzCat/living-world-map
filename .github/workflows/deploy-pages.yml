@@ -1,9 +1,10 @@
 name: Deploy GitHub Pages
 
 on:
-  push:
+  workflow_run:
+    workflows: [Validation]
+    types: [completed]
     branches: [main]
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -17,10 +18,13 @@ concurrency:
 jobs:
   build:
     name: Prepare static site
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
+      - name: Check out validated commit
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload static site
