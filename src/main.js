@@ -1,121 +1,165 @@
 import { renderBrushPreview } from "./brush-preview.js";
 import { renderWorld } from "./map-renderer.js";
-import { loadWorld, serialiseWorld } from "./world-data.js";
+import { panView, zoomView } from "./view-maths.js";
+import { loadWorld, serialiseWorld, validateWorld } from "./world-data.js";
 
 const SVG_NS = "http://<scrubbed-url-domain>/2000/svg";
+const storageKey = "living-world-map";
 const map = document.querySelector("#map");
 const dataOutput = document.querySelector("#world-data");
 const status = document.querySelector("#status");
-const brushModeButton = document.querySelector("#brush-mode");
 const brushType = document.querySelector("#brush-type");
 const brushSize = document.querySelector("#brush-size");
 const brushSizeValue = document.querySelector("#brush-size-value");
+const chosenPosition = document.querySelector("#chosen-position");
+const modeHelp = {
+  select: "Move settlements: drag a settlement; connected roads follow.",
+  pan: "Move map: drag empty map space. Use the wheel or buttons to zoom.",
+  choose: "Choose position: click the map, then add a settlement or mountain.",
+  brush: "Brush: drag to paint. The outline shows the selected size."
+};
 
 let world;
-let brushMode = false;
-let activeStroke = null;
-let activePointerId = null;
+let view;
+let mode = "select";
+let gesture = null;
+let chosen = null;
 let liveLayer;
 let brushOutline;
+let lastJSON = "";
 
+function clamp(value, minimum, maximum) { return Math.max(minimum, Math.min(maximum, value)); }
+function setStatus(message) { status.textContent = message; }
+function applyView() { map.setAttribute("viewBox", `${view.x} ${view.y} ${view.width} ${view.height}`); }
+function resetView() { view = { x: 0, y: 0, width: world.canvas.width, height: world.canvas.height }; applyView(); }
+function syncJSON() { dataOutput.value = serialiseWorld(world); lastJSON = dataOutput.value; }
+function rounded([x, y]) { return [Math.round(x * 10) / 10, Math.round(y * 10) / 10]; }
+function inside([x, y]) { return x >= 0 && y >= 0 && x <= world.canvas.width && y <= world.canvas.height; }
 function mapPoint(event) {
-  const point = map.createSVGPoint();
-  point.x = event.clientX;
-  point.y = event.clientY;
+  const point = map.createSVGPoint(); point.x = event.clientX; point.y = event.clientY;
   const transformed = point.matrixTransform(map.getScreenCTM().inverse());
-  return [Math.round(transformed.x * 10) / 10, Math.round(transformed.y * 10) / 10];
-}
-
-function pointInside([x, y]) {
-  return x >= 0 && y >= 0 && x <= world.canvas.width && y <= world.canvas.height;
+  return rounded([transformed.x, transformed.y]);
 }
 
 function makeInteractionLayer() {
-  liveLayer = document.createElementNS(SVG_NS, "g");
-  liveLayer.setAttribute("class", "live-brush-layer");
-  brushOutline = document.createElementNS(SVG_NS, "circle");
-  brushOutline.setAttribute("class", "brush-outline");
-  brushOutline.setAttribute("visibility", "hidden");
+  liveLayer = document.createElementNS(SVG_NS, "g"); liveLayer.setAttribute("class", "live-brush-layer");
+  brushOutline = document.createElementNS(SVG_NS, "circle"); brushOutline.setAttribute("class", "brush-outline"); brushOutline.setAttribute("visibility", "hidden");
   map.append(liveLayer, brushOutline);
 }
-
-function refreshMap() {
-  renderWorld(map, world);
-  makeInteractionLayer();
-  dataOutput.value = serialiseWorld(world);
-}
-
+function refreshMap({ sync = true } = {}) { renderWorld(map, world); applyView(); makeInteractionLayer(); if (sync) syncJSON(); }
+function updateChosen(point = chosen) { chosenPosition.textContent = point ? `Position: ${point[0]}, ${point[1]}` : "No position chosen"; }
 function updateOutline(point) {
-  if (!brushMode || !pointInside(point)) {
-    brushOutline.setAttribute("visibility", "hidden");
-    return;
-  }
-  brushOutline.setAttribute("cx", point[0]);
-  brushOutline.setAttribute("cy", point[1]);
-  brushOutline.setAttribute("r", Number(brushSize.value) / 2);
-  brushOutline.setAttribute("visibility", "visible");
+  if (mode !== "brush" || !inside(point)) { brushOutline.setAttribute("visibility", "hidden"); return; }
+  brushOutline.setAttribute("cx", point[0]); brushOutline.setAttribute("cy", point[1]);
+  brushOutline.setAttribute("r", Number(brushSize.value) / 2); brushOutline.setAttribute("visibility", "visible");
+}
+function setMode(next) {
+  mode = next; map.dataset.mode = mode;
+  document.querySelectorAll("button[data-mode]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.mode === mode)));
+  if (mode !== "brush") brushOutline.setAttribute("visibility", "hidden");
+  setStatus(modeHelp[mode]);
+}
+function ensureCurrentJSON() { return dataOutput.value === lastJSON || applyJSON(false); }
+function applyJSON(reset = true) {
+  try {
+    world = validateWorld(JSON.parse(dataOutput.value)); chosen = null; updateChosen(); syncJSON();
+    if (reset) resetView(); refreshMap(); setStatus(`JSON applied. ${modeHelp[mode]}`); return true;
+  } catch (error) { setStatus(`Could not apply JSON: ${error.message}`); return false; }
+}
+function download(content, type, filename) {
+  const url = URL.createObjectURL(new Blob([content], { type }));
+  const link = document.createElement("a"); link.href = url; link.download = filename; link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+function updateRoads(settlement) {
+  map.querySelectorAll(".road-layer line").forEach(line => {
+    if (line.dataset.from === settlement.id) { line.setAttribute("x1", settlement.x); line.setAttribute("y1", settlement.y); }
+    if (line.dataset.to === settlement.id) { line.setAttribute("x2", settlement.x); line.setAttribute("y2", settlement.y); }
+  });
 }
 
-function setBrushMode(enabled) {
-  brushMode = enabled;
-  map.classList.toggle("brush-active", enabled);
-  brushModeButton.setAttribute("aria-pressed", String(enabled));
-  if (!enabled) brushOutline.setAttribute("visibility", "hidden");
-  status.textContent = enabled
-    ? "Brush mode: drag on the map to paint. The outline shows the selected size."
-    : "Brush mode off. The rendered world remains unchanged.";
-}
-
-function updateBrushSize() {
-  brushSizeValue.value = brushSize.value;
-  brushSizeValue.textContent = brushSize.value;
-  brushOutline.setAttribute("r", Number(brushSize.value) / 2);
-}
-
-brushModeButton.addEventListener("click", () => setBrushMode(!brushMode));
-brushSize.addEventListener("input", updateBrushSize);
-map.addEventListener("pointerenter", event => updateOutline(mapPoint(event)));
-map.addEventListener("pointerleave", () => {
-  if (activePointerId === null) brushOutline.setAttribute("visibility", "hidden");
+map.addEventListener("pointerdown", event => {
+  if (event.button !== 0 || gesture || !ensureCurrentJSON()) return;
+  const point = mapPoint(event);
+  const settlementNode = event.target.closest(".settlement");
+  if (mode === "select" && settlementNode) {
+    const settlement = world.settlements.find(item => item.id === settlementNode.dataset.id);
+    gesture = { kind: "settlement", pointerId: event.pointerId, node: settlementNode, settlement, offset: [point[0] - settlement.x, point[1] - settlement.y] };
+  } else if (mode === "pan" && !settlementNode) {
+    gesture = { kind: "pan", pointerId: event.pointerId, startClient: { x: event.clientX, y: event.clientY }, startView: { ...view } };
+  } else if (mode === "choose" && inside(point)) {
+    chosen = point; updateChosen(); setStatus("Position chosen. Add a settlement or mountain."); return;
+  } else if (mode === "brush" && inside(point)) {
+    const stroke = { type: brushType.value, size: Number(brushSize.value), points: [point] };
+    world.brushStrokes.push(stroke); gesture = { kind: "brush", pointerId: event.pointerId, stroke }; renderBrushPreview(liveLayer, stroke);
+  } else return;
+  map.setPointerCapture(event.pointerId); event.preventDefault();
 });
 map.addEventListener("pointermove", event => {
-  const point = mapPoint(event);
-  updateOutline(point);
-  if (event.pointerId !== activePointerId || !activeStroke || !pointInside(point)) return;
-  const last = activeStroke.points.at(-1);
-  if (Math.hypot(point[0] - last[0], point[1] - last[1]) < 2) return;
-  activeStroke.points.push(point);
-  renderBrushPreview(liveLayer, activeStroke);
+  const point = mapPoint(event); updateOutline(point);
+  if (!gesture || event.pointerId !== gesture.pointerId) return;
+  if (gesture.kind === "pan") {
+    const rect = map.getBoundingClientRect();
+    view = panView(gesture.startView, gesture.startClient, { x: event.clientX, y: event.clientY }, { width: rect.width, height: rect.height }); applyView();
+  } else if (gesture.kind === "settlement") {
+    const [offsetX, offsetY] = gesture.offset;
+    gesture.settlement.x = Math.round(clamp(point[0] - offsetX, 0, world.canvas.width) * 10) / 10;
+    gesture.settlement.y = Math.round(clamp(point[1] - offsetY, 0, world.canvas.height) * 10) / 10;
+    gesture.node.setAttribute("transform", `translate(${gesture.settlement.x} ${gesture.settlement.y})`); updateRoads(gesture.settlement);
+  } else if (gesture.kind === "brush" && inside(point)) {
+    const last = gesture.stroke.points.at(-1);
+    if (Math.hypot(point[0] - last[0], point[1] - last[1]) >= 2) { gesture.stroke.points.push(point); renderBrushPreview(liveLayer, gesture.stroke); }
+  }
 });
-map.addEventListener("pointerdown", event => {
-  if (!brushMode || event.button !== 0 || activePointerId !== null) return;
-  const point = mapPoint(event);
-  if (!pointInside(point)) return;
-  activeStroke = { type: brushType.value, size: Number(brushSize.value), points: [point] };
-  world.brushStrokes.push(activeStroke);
-  activePointerId = event.pointerId;
-  map.setPointerCapture(event.pointerId);
-  renderBrushPreview(liveLayer, activeStroke);
-  event.preventDefault();
-});
-
-function finishStroke(event) {
-  if (event.pointerId !== activePointerId) return;
-  activePointerId = null;
-  activeStroke = null;
-  refreshMap();
-  status.textContent = "Brush stroke added to the world data.";
+function finishGesture(event) {
+  if (!gesture || event.pointerId !== gesture.pointerId) return;
+  const finished = gesture.kind; gesture = null;
+  if (finished !== "pan") { syncJSON(); refreshMap(); }
+  setStatus(`${finished === "brush" ? "Brush stroke added." : finished === "settlement" ? "Settlement moved." : "Map moved."} ${modeHelp[mode]}`);
 }
+map.addEventListener("pointerup", finishGesture); map.addEventListener("pointercancel", finishGesture);
+map.addEventListener("pointerleave", () => { if (!gesture) brushOutline.setAttribute("visibility", "hidden"); });
+map.addEventListener("wheel", event => {
+  event.preventDefault(); const [x, y] = mapPoint(event); const factor = event.deltaY < 0 ? 0.85 : 1.15;
+  const next = zoomView(view, factor, { x, y });
+  if (next.width >= world.canvas.width * 0.2 && next.width <= world.canvas.width * 5) { view = next; applyView(); }
+}, { passive: false });
 
-map.addEventListener("pointerup", finishStroke);
-map.addEventListener("pointercancel", finishStroke);
+document.querySelectorAll("button[data-mode]").forEach(button => button.addEventListener("click", () => setMode(button.dataset.mode)));
+brushSize.addEventListener("input", () => { brushSizeValue.value = brushSize.value; brushSizeValue.textContent = brushSize.value; brushOutline.setAttribute("r", Number(brushSize.value) / 2); });
+document.querySelector("#zoom-in").addEventListener("click", () => { view = zoomView(view, 0.8, { x: view.x + view.width / 2, y: view.y + view.height / 2 }); applyView(); });
+document.querySelector("#zoom-out").addEventListener("click", () => { view = zoomView(view, 1.25, { x: view.x + view.width / 2, y: view.y + view.height / 2 }); applyView(); });
+document.querySelector("#reset-view").addEventListener("click", resetView);
+document.querySelector("#apply-json").addEventListener("click", () => applyJSON(true));
+document.querySelector("#undo-brush").addEventListener("click", () => {
+  if (!ensureCurrentJSON()) return;
+  if (!world.brushStrokes.length) { setStatus("There are no brush strokes to undo."); return; }
+  world.brushStrokes.pop(); refreshMap(); setStatus("Last brush stroke undone.");
+});
+document.querySelector("#add-settlement").addEventListener("click", () => {
+  if (!ensureCurrentJSON() || !chosen) { setStatus("Choose a position first."); return; }
+  const name = document.querySelector("#settlement-name").value.trim(); if (!name) { setStatus("Enter a settlement name."); return; }
+  const base = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "settlement";
+  let id = base; let suffix = 2; while (world.settlements.some(item => item.id === id)) id = `${base}-${suffix++}`;
+  world.settlements.push({ id, name, type: document.querySelector("#settlement-type").value, x: chosen[0], y: chosen[1] });
+  chosen = null; updateChosen(); refreshMap(); setStatus("Settlement added.");
+});
+document.querySelector("#add-mountain").addEventListener("click", () => {
+  if (!ensureCurrentJSON() || !chosen) { setStatus("Choose a position first."); return; }
+  world.mountains.push({ x: chosen[0], y: chosen[1] }); chosen = null; updateChosen(); refreshMap(); setStatus("Mountain added.");
+});
+document.querySelector("#save").addEventListener("click", () => { if (ensureCurrentJSON()) { localStorage.setItem(storageKey, serialiseWorld(world)); setStatus("World saved in this browser."); } });
+document.querySelector("#load").addEventListener("click", () => {
+  try { const saved = localStorage.getItem(storageKey); if (!saved) { setStatus("No saved world found."); return; } world = validateWorld(JSON.parse(saved)); chosen = null; updateChosen(); resetView(); refreshMap(); setStatus("Saved world loaded."); }
+  catch (error) { setStatus(`Could not load saved world: ${error.message}`); }
+});
+document.querySelector("#export-json").addEventListener("click", () => { if (ensureCurrentJSON()) download(serialiseWorld(world), "application/json", "world.json"); });
+document.querySelector("#export-svg").addEventListener("click", () => {
+  if (!ensureCurrentJSON()) return; const copy = map.cloneNode(true); copy.querySelectorAll(".live-brush-layer, .brush-outline").forEach(node => node.remove());
+  copy.setAttribute("viewBox", `0 0 ${world.canvas.width} ${world.canvas.height}`); copy.setAttribute("width", world.canvas.width); copy.setAttribute("height", world.canvas.height);
+  download(new XMLSerializer().serializeToString(copy), "image/svg+xml", "world.svg");
+});
 
 try {
-  world = await loadWorld("data/sample-world.json");
-  refreshMap();
-  updateBrushSize();
-  status.textContent = "Sample world rendered from canonical JSON.";
-} catch (error) {
-  console.error(error);
-  status.textContent = `Could not load the sample world: ${error.message}`;
-}
+  world = await loadWorld("data/sample-world.json"); resetView(); refreshMap(); brushSizeValue.value = brushSize.value; setMode("select");
+} catch (error) { console.error(error); setStatus(`Could not load the sample world: ${error.message}`); }
