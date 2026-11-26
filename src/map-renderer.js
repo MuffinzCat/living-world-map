@@ -1,7 +1,11 @@
-const SVG_NS = "http://<scrubbed-url-domain>/2000/svg";
 export const palette = Object.freeze({ land: "#e5d3a5", water: "#a9c5c0", ink: "#51402d", road: "#8a5738", river: "#477f8a", forest: "#647854", mountain: "#806d56", paper: "#f7eedb" });
-function svgElement(name, attributes = {}) { const node = document.createElementNS(SVG_NS, name); for (const [key, value] of Object.entries(attributes)) node.setAttribute(key, value); return node; }
-function append(parent, name, attributes = {}) { const node = svgElement(name, attributes); parent.append(node); return node; }
+
+function svgElement(parent, name, attributes = {}) {
+  const node = parent.ownerDocument.createElementNS(parent.namespaceURI, name);
+  for (const [key, value] of Object.entries(attributes)) node.setAttribute(key, value);
+  return node;
+}
+function append(parent, name, attributes = {}) { const node = svgElement(parent, name, attributes); parent.append(node); return node; }
 function pointsAttribute(points) { return points.map(([x, y]) => `${x},${y}`).join(" "); }
 function pathData(points) { return points.map(([x, y], index) => `${index === 0 ? "M" : "L"} ${x} ${y}`).join(" "); }
 function drawMountain(parent, x, y, size = 32) { const group = append(parent, "g", { class: "mountain-symbol" }); append(group, "path", { d: `M ${x - size / 2} ${y + size / 3} L ${x} ${y - size / 2} L ${x + size / 2} ${y + size / 3} Z`, fill: palette.land, stroke: palette.mountain, "stroke-width": 2, "stroke-linejoin": "round" }); append(group, "path", { d: `M ${x} ${y - size / 2} L ${x + size / 8} ${y + size / 8}`, fill: "none", stroke: palette.mountain, "stroke-width": 1.5 }); }
