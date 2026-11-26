@@ -34,12 +34,12 @@ test("open flyout is docked right and shrinks the editor", () => {
   assert.match(styles, /body\.json-flyout-open \.site-header, body\.json-flyout-open \.app-shell \{ margin-right: var\(--flyout-width\); \}/);
 });
 
-test("map frame follows the rendered map aspect ratio", () => {
-  assert.match(script, /MutationObserver/);
-  assert.match(script, /--map-aspect/);
-  assert.match(script, /values\[2\].*values\[3\]/s);
-  assert.match(styles, /aspect-ratio: var\(--map-aspect/);
-  assert.doesNotMatch(styles, /height: min\(72vh, 760px\)/);
+test("the editor fits inside the browser viewport without page scrolling", () => {
+  assert.match(styles, /html, body \{[^}]*height: 100%[^}]*overflow: hidden/s);
+  assert.match(styles, /body \{[^}]*display: flex[^}]*flex-direction: column/s);
+  assert.match(styles, /\.app-shell \{[^}]*min-height: 0[^}]*flex: 1 1 auto[^}]*overflow: hidden/s);
+  assert.match(styles, /\.panel \{[^}]*height: 100%[^}]*min-height: 0[^}]*flex-direction: column/s);
+  assert.match(styles, /\.map-frame \{[^}]*min-height: 0[^}]*flex: 1 1 auto[^}]*overflow: hidden/s);
 });
 
 test("narrow screens use a full-width flyout without squeezing the map", () => {
