@@ -30,7 +30,8 @@ placementButtons.forEach(button => {
 
 document.addEventListener("keydown", event => {
   if (event.key === "Escape" && !placementFlyout.hidden) {
+    const returnFocus = activeButton;
     closePlacementFlyout();
-    activeButton?.focus();
+    returnFocus?.focus();
   }
 });
