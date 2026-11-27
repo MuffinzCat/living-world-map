@@ -54,7 +54,7 @@ test("shared toolbar visibility and animation use separate rules", async () => {
   assert.match(cssDeclarations(flyout, ".tool-options-toolbar.animate-open").get("animation"), /reveal-tool-options/);
 });
 
-test("all tool triggers target and directly open the one toolbar container", async () => {
+test("menu buttons directly select content in the shared toolbar", async () => {
   const html = await read("index.html");
   const source = await read("src/tool-options.js");
   for (const id of ["add-settlement", "add-mountain", "brush-mode"]) {
