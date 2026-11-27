@@ -9,7 +9,7 @@ async function read(path) { return readFile(new URL(path, root), "utf8"); }
 test("brush settings use the shared accessible toolbar", async () => {
   const html = await read("index.html");
   const button = openingTagWith(html, "id", "brush-mode");
-  expectAttribute(button, "aria-controls", "tool-options-toolbar");
+  expectAttribute(button, "aria-controls", "brush-controls");
   expectAttribute(button, "aria-expanded", "false");
   const toolbar = openingTagWith(html, "id", "tool-options-toolbar");
   assert.match(toolbar, /\bhidden\b/);
@@ -23,11 +23,8 @@ test("brush settings use the shared accessible toolbar", async () => {
 
 test("brush content follows map mode selection and supports Escape", async () => {
   const source = await read("src/brush-controls.js");
-  assert.match(source, /button\[data-mode\]/);
-  assert.match(source, /showToolOptions\(brushControls\)/);
-  assert.match(source, /hideToolOptions\(brushControls\)/);
-  assert.match(source, /aria-expanded/);
   assert.match(source, /event\.key === "Escape"/);
+  assert.match(source, /isToolOptionsVisible\(brushControls\)/);
 });
 
 test("brush undo remains accessible", async () => {

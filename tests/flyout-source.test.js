@@ -44,7 +44,7 @@ test("the editor fits inside the browser viewport without page scrolling", () =>
 
 test("shared tool-options controller opens only one content panel", async () => {
   const source = await readFile(new URL("src/tool-options.js", root), "utf8");
-  assert.match(source, /contents\.forEach\(item => \{ item\.hidden = item !== content; \}\)/);
+  assert.match(source, /getContents\(\)\.forEach\(item => \{ item\.hidden = item !== content; \}\)/);
   assert.match(source, /#roads-mode/);
   assert.match(source, /data-mode="select"/);
 });

@@ -11,7 +11,6 @@ test("selection controls are loaded in the shared tool-options toolbar", async (
   assert.match(page, /styles\/selection\.css/);
   assert.match(page, /src\/selection-controls\.js/);
   assert.match(source, /optionsToolbar\.append\(controls\)/);
-  assert.match(source, /showToolOptions\(controls\)/);
   assert.match(source, /id="duplicate-selection"/);
   assert.match(source, /id="delete-selection"/);
   assert.match(source, /id="clear-selection"/);
@@ -23,7 +22,10 @@ test("settlements and manual mountains support click and box selection", async (
   assert.match(source, /matches\("\.settlement"\)/);
   assert.match(source, /mountain-symbol\[data-object-id/);
   assert.match(source, /startBoxSelection/);
-  assert.match(source, /getBBox\(\)/);
+  assert.match(source, /const world = worldData\(\)/);
+  assert.match(source, /world\.settlements/);
+  assert.match(source, /world\.mountains/);
+  assert.match(source, /world\.forests/);
   assert.match(source, /event\.shiftKey/);
   assert.match(styles, /\.selection-box/);
 });

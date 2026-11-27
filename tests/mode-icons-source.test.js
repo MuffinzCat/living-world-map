@@ -35,7 +35,9 @@ test("primary toolbar puts Roads between Add mountain and Brush", async () => {
 
 test("Roads icon uses two dots and one S-shaped connecting path", async () => {
   const html = await read("index.html");
-  const roadsButton = openingTagWith(html, "id", "roads-mode");
+  const start = html.indexOf('id="roads-mode"');
+  const end = html.indexOf("</button>", start);
+  const roadsButton = html.slice(start, end);
   assert.equal((roadsButton.match(/<circle\b/g) ?? []).length, 2);
   assert.match(roadsButton, /<path d="M7 6 C/);
 });
