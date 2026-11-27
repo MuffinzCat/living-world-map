@@ -20,6 +20,14 @@ test("settlement flyout has concise title, name, type, and cancel controls", asy
   assert.match(html, /id="cancel-placement"/);
 });
 
+test("settlement controls wrap within the flyout instead of overflowing", async () => {
+  const css = await read("styles/placement-flyout.css");
+  assert.match(css, /\.placement-flyout \{[^}]*flex-wrap: wrap;[^}]*width: fit-content;[^}]*max-width:/s);
+  assert.match(css, /#settlement-fields \{[^}]*display: flex;[^}]*flex-wrap: wrap;[^}]*min-width: 0;/s);
+  assert.match(css, /#settlement-name \{[^}]*min-width: 0;[^}]*max-width: 100%;/s);
+  assert.match(css, /#cancel-placement \{[^}]*flex: 0 0 auto;/s);
+});
+
 test("mountain flyout hides settlement-only fields and keeps cancel", async () => {
   const source = await read("src/placement-controls.js");
   assert.match(source, /settlementFields\.hidden = !settlement/);
