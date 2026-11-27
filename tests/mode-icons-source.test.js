@@ -25,10 +25,17 @@ test("map movement is first and selected by default", async () => {
   assert.match(source, /\.click\(\)/);
 });
 
-test("settlement movement reuses the map movement symbol", async () => {
+test("settlement movement reuses a clearly sized map movement symbol", async () => {
   const html = await read("index.html");
   assert.equal((html.match(/class="move-symbol"/g) ?? []).length, 2);
-  assert.match(html, /data-mode="select"[\s\S]*?<g transform="translate\(13 13\) scale\(\.38\)">/);
+  assert.match(html, /data-mode="select"[\s\S]*?<g transform="translate\(10\.5 10\.5\) scale\(\.56\)">/);
+});
+
+test("brush icon uses a filled classical paintbrush silhouette", async () => {
+  const html = await read("index.html");
+  const brush = html.match(/id="brush-mode"[\s\S]*?<\/button>/)?.[0] ?? "";
+  assert.match(brush, /fill="currentColor"/);
+  assert.match(brush, /M11\.5 11\.7c-2\.2\.2/);
 });
 
 test("icon controls retain mode and pressed-state hooks", async () => {
