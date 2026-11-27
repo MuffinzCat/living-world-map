@@ -4,6 +4,12 @@ const limitStorageKey = "living-world-map-history-limit";
 const dataOutput = document.querySelector("#world-data");
 const map = document.querySelector("#map");
 const applyButton = document.querySelector("#apply-json");
+const oldUndo = document.querySelector("#undo-brush");
+oldUndo.id = "undo";
+oldUndo.setAttribute("aria-label", "Undo last edit");
+oldUndo.dataset.tooltip = "Undo last edit";
+oldUndo.innerHTML = "Undo";
+oldUndo.insertAdjacentHTML("afterend", '<button id="redo" type="button" disabled>Redo</button><label for="history-limit">History</label><input id="history-limit" type="number" min="1" max="500" step="1" value="50" aria-label="Maximum undo history steps">');
 const undoButton = document.querySelector("#undo");
 const redoButton = document.querySelector("#redo");
 const limitInput = document.querySelector("#history-limit");
@@ -40,8 +46,7 @@ function restore(state, message) {
   updateControls();
 }
 function initialise() {
-  const storedLimit = localStorage.getItem(limitStorageKey) ?? "50";
-  history = createHistory(currentState(), storedLimit);
+  history = createHistory(currentState(), localStorage.getItem(limitStorageKey) ?? "50");
   updateControls();
 }
 

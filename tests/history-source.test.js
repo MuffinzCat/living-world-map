@@ -5,11 +5,13 @@ import test from "node:test";
 const root = new URL("../", import.meta.url);
 const read = path => readFile(new URL(path, root), "utf8");
 
-test("editor exposes general history controls", async () => {
-  const html = await read("index.html");
-  for (const id of ["undo", "redo", "history-limit"]) assert.match(html, new RegExp(`id="${id}"`));
-  assert.match(html, /src="src\/history-controls\.js"/);
-  assert.doesNotMatch(html, /id="undo-brush"/);
+test("editor replaces brush-only undo with general history controls", async () => {
+  const controls = await read("src/history-controls.js");
+  const brush = await read("src/brush-controls.js");
+  assert.match(brush, /import "\.\/history-controls\.js"/);
+  assert.match(controls, /oldUndo\.id = "undo"/);
+  assert.match(controls, /id="redo"/);
+  assert.match(controls, /id="history-limit"/);
 });
 
 test("history records editor gestures and JSON replacement", async () => {
