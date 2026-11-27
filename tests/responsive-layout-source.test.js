@@ -35,12 +35,20 @@ test("JSON panel remains within the viewport", async () => {
   assert.equal(cssDeclarations(css, ".data-panel[open]").get("max-height"), "100dvh");
 });
 
-test("compact tool flyouts use the toolbar width without scrollbars", async () => {
-  const brush = await read("styles/brush-flyout.css");
-  const placement = await read("styles/placement-flyout.css");
-  for (const [css, tool, flyout] of [[brush, ".brush-tool", ".brush-flyout"], [placement, ".placement-tool", ".placement-flyout"]]) {
-    assert.match(css, new RegExp(`${tool.replace(".", "\\.")} \\{ position: static; \\}`));
-    assert.match(css, new RegExp(`${flyout.replace(".", "\\.")} \\{ right: 0; left: 0; width: auto;`));
-    assert.doesNotMatch(cssDeclarations(css, flyout).get("overflow") ?? "", /auto|scroll/);
-  }
+test("brush flyout uses toolbar width on narrow screens", async () => {
+  const css = await read("styles/brush-flyout.css");
+  assert.match(css, /\.brush-tool \{ position: static; \}/);
+  assert.match(css, /\.brush-flyout \{ right: 0; left: 0; width: auto;/);
+});
+
+test("placement controls open as a full-width sliding toolbar", async () => {
+  const css = await read("styles/placement-flyout.css");
+  const source = await read("src/placement-controls.js");
+  const flyout = cssDeclarations(css, ".placement-flyout");
+  assert.equal(flyout.get("position"), "relative");
+  assert.equal(flyout.get("width"), "100%");
+  assert.equal(flyout.get("border-top"), "0");
+  assert.match(flyout.get("animation"), /reveal-placement-toolbar/);
+  assert.doesNotMatch(source, /append\(placementFlyout\)/);
+  assert.match(css, /prefers-reduced-motion: reduce/);
 });
