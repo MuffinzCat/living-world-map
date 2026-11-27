@@ -1,0 +1,94 @@
+name: Pull request preview
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, closed]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    name: Publish preview
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out preview repository
+        uses: actions/checkout@v4
+        with:
+          repository: MuffinzCat/living-world-map-previews
+          ref: main
+          path: previews
+          token: ${{ secrets.PREVIEW_REPO_TOKEN }}
+
+      - name: Check out pull request
+        if: github.event.action != 'closed'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: source
+          persist-credentials: false
+
+      - name: Create or remove preview
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_ACTION: ${{ github.event.action }}
+        run: |
+          set -euo pipefail
+          preview_dir="previews/pr-${PR_NUMBER}"
+          rm -rf "$preview_dir"
+
+          if [ "$PR_ACTION" != "closed" ]; then
+            mkdir -p "$preview_dir"
+            cp source/index.html "$preview_dir/"
+            cp source/.nojekyll "$preview_dir/"
+            cp -R source/data source/src source/styles "$preview_dir/"
+          fi
+
+      - name: Publish preview repository changes
+        working-directory: previews
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_ACTION: ${{ github.event.action }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add --all
+
+          if git diff --cached --quiet; then
+            echo "Preview repository is already up to date."
+            exit 0
+          fi
+
+          if [ "$PR_ACTION" = "closed" ]; then
+            git commit -m "chore: remove preview for PR #${PR_NUMBER}"
+          else
+            git commit -m "chore: update preview for PR #${PR_NUMBER}"
+          fi
+
+          git push origin main
+
+      - name: Add preview link to pull request
+        if: github.event.action != 'closed'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPOSITORY: ${{ github.repository }}
+          PREVIEW_URL: https://<scrubbed-url-domain>/living-world-map-previews/pr-$%7B%7B github.event.pull_request.number }}/
+        run: |
+          set -euo pipefail
+          marker='<!-- living-world-map-preview -->'
+          body=$(printf '%s\nPreview: %s\n\nThis preview updates when new commits are pushed and is removed when the pull request closes.' "$marker" "$PREVIEW_URL")
+          comment_id=$(gh api "repos/${REPOSITORY}/issues/${PR_NUMBER}/comments" --paginate --jq ".[] | select(.body | contains(\"${marker}\")) | .id" | head -n 1)
+
+          if [ -n "$comment_id" ]; then
+            gh api --method PATCH "repos/${REPOSITORY}/issues/comments/${comment_id}" -f body="$body" >/dev/null
+          else
+            gh api --method POST "repos/${REPOSITORY}/issues/${PR_NUMBER}/comments" -f body="$body" >/dev/null
+          fi
