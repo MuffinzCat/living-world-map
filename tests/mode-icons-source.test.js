@@ -8,7 +8,7 @@ async function read(path) { return readFile(new URL(path, root), "utf8"); }
 
 test("map tools expose accessible names and tooltips", async () => {
   const html = await read("index.html");
-  for (const [mode, label] of [["select", "Move settlements"], ["pan", "Move map"], ["brush", "Brush"]]) {
+  for (const [mode, label] of [["select", "Select and move objects"], ["pan", "Move map"], ["brush", "Brush"]]) {
     const button = openingTagWith(html, "data-mode", mode);
     expectAttribute(button, "aria-label", label);
     expectAttribute(button, "data-tooltip", label);

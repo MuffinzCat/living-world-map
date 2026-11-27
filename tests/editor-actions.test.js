@@ -42,7 +42,7 @@ test("mixed duplication creates one corresponding copy per object with one offse
     [map.settlements.at(-1), map.mountains.at(-1), map.forests.at(-1)].map(item => [item.x, item.y]),
     [[120, 120], [60, 70], [80, 90]],
   );
-  assert.equal(new Set(map.settlements.map(item => item.id)).size, 2);
+  assert.equal(new Set(map.settlements.map(item => item.id)).size, 3);
 });
 
 test("deletion removes settlements and every connected road", () => {

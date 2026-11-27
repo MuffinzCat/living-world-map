@@ -10,7 +10,7 @@ test("selection controls are loaded in the shared tool-options toolbar", async (
   const source = await read("src/selection-controls.js");
   assert.match(page, /styles\/selection\.css/);
   assert.match(page, /src\/selection-controls\.js/);
-  assert.match(source, /optionsToolbar\.append\(selectionControls\)/);
+  assert.match(source, /optionsToolbar\.append\(controls\)/);
   assert.match(source, /showToolOptions\(selectionControls\)/);
   assert.match(source, /id="duplicate-selection"/);
   assert.match(source, /id="delete-selection"/);
@@ -21,7 +21,7 @@ test("settlements and manual mountains support click and box selection", async (
   const source = await read("src/selection-controls.js");
   const styles = await read("styles/selection.css");
   assert.match(source, /matches\("\.settlement"\)/);
-  assert.match(source, /mountain-symbol\[data-object-kind=/);
+  assert.match(source, /mountain-symbol\[data-object-id/);
   assert.match(source, /startBoxSelection/);
   assert.match(source, /getBBox\(\)/);
   assert.match(source, /event\.shiftKey/);
@@ -33,8 +33,8 @@ test("delete and duplicate apply to the full selection through history", async (
   assert.match(source, /const targets = \[\.\.\.selected\]/);
   assert.match(source, /history-action-start/);
   assert.match(source, /history-action-finish/);
-  assert.match(source, /world\.roads = world\.roads\.filter/);
-  assert.match(source, /uniqueSettlementId/);
+  assert.match(source, /deleteObjects/);
+  assert.match(source, /duplicateObjects/);
 });
 
 test("selection supports keyboard actions and stays out of SVG exports", async () => {
