@@ -20,11 +20,13 @@ test("settlement flyout has concise title, name, type, and cancel controls", asy
   assert.match(html, /class="placement-action-row">\s*<button id="cancel-placement"/);
 });
 
-test("settlement name and type use separate field rows", async () => {
+test("settlement name and type are explicitly assigned separate rows", async () => {
   const css = await read("styles/placement-flyout.css");
   assert.match(css, /#settlement-fields \{[^}]*display: grid;[^}]*grid-template-columns: auto minmax\(0, 1fr\);/s);
-  assert.match(css, /#settlement-name \{[^}]*width: 100%;[^}]*min-width: 0;[^}]*max-width: 100%;/s);
-  assert.match(css, /#settlement-type \{[^}]*justify-self: start;/s);
+  assert.match(css, /label\[for="settlement-name"\] \{[^}]*grid-column: 1;[^}]*grid-row: 1;/s);
+  assert.match(css, /#settlement-name \{[^}]*grid-column: 2;[^}]*grid-row: 1;/s);
+  assert.match(css, /label\[for="settlement-type"\] \{[^}]*grid-column: 1;[^}]*grid-row: 2;/s);
+  assert.match(css, /#settlement-type \{[^}]*grid-column: 2;[^}]*grid-row: 2;/s);
 });
 
 test("settlement controls stay within the flyout instead of overflowing", async () => {
