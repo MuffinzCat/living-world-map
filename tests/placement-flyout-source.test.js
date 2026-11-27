@@ -31,6 +31,12 @@ test("settlement name and type use separate field rows", async () => {
   assert.match(css, /\.placement-field-row \{[^}]*display: grid;[^}]*grid-template-columns: auto minmax\(0, 1fr\);/s);
 });
 
+test("settlement field controls align to the right of the flyout", async () => {
+  const css = await read("styles/placement-flyout.css");
+  assert.match(css, /\.placement-field-row > :is\(input, select\) \{[^}]*justify-self: end;/s);
+  assert.match(css, /#settlement-name \{[^}]*width: min\(14rem, 100%\);/s);
+});
+
 test("settlement controls stay within the flyout instead of overflowing", async () => {
   const css = await read("styles/placement-flyout.css");
   assert.match(css, /\.placement-flyout \{[^}]*flex-direction: column;[^}]*align-items: stretch;[^}]*width: fit-content;[^}]*max-width:/s);
