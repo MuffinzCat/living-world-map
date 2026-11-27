@@ -17,7 +17,30 @@ jobs:
     name: Publish preview
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
+    env:
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      PR_ACTION: ${{ github.event.action }}
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+      SOURCE_BRANCH: ${{ github.event.pull_request.head.ref }}
+      REPOSITORY: ${{ github.repository }}
+      REPOSITORY_OWNER: ${{ github.repository_owner }}
+      GH_TOKEN: ${{ github.token }}
     steps:
+      - name: Mark preview as publishing
+        if: github.event.action != 'closed'
+        run: |
+          set -euo pipefail
+          marker='<!-- living-world-map-preview -->'
+          short_sha="${SOURCE_SHA:0:7}"
+          published_at=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+          body=$(printf '%s\n## Pull request preview\n\n**Status: Publishing**\n\n- Pull request: #%s\n- Branch: `%s`\n- Revision: `%s`\n- Update started: %s\n\nThe preview link will appear here after this revision is available.' "$marker" "$PR_NUMBER" "$SOURCE_BRANCH" "$short_sha" "$published_at")
+          comment_id=$(gh api "repos/${REPOSITORY}/issues/${PR_NUMBER}/comments" --paginate --jq ".[] | select(.body | contains(\"${marker}\")) | .id" | head -n 1)
+          if [ -n "$comment_id" ]; then
+            gh api --method PATCH "repos/${REPOSITORY}/issues/comments/${comment_id}" -f body="$body" >/dev/null
+          else
+            gh api --method POST "repos/${REPOSITORY}/issues/${PR_NUMBER}/comments" -f body="$body" >/dev/null
+          fi
+
       - name: Check out preview repository
         uses: actions/checkout@v4
         with:
@@ -35,9 +58,6 @@ jobs:
           persist-credentials: false
 
       - name: Create or remove preview
-        env:
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          PR_ACTION: ${{ github.event.action }}
         run: |
           set -euo pipefail
           preview_dir="previews/pr-${PR_NUMBER}"
@@ -48,13 +68,46 @@ jobs:
             cp source/index.html "$preview_dir/"
             cp source/.nojekyll "$preview_dir/"
             cp -R source/data source/src source/styles "$preview_dir/"
+
+            short_sha="${SOURCE_SHA:0:7}"
+            published_at=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+            export PREVIEW_DIR="$preview_dir" SHORT_SHA="$short_sha" PUBLISHED_AT="$published_at"
+            python3 <<'PY'
+          import html
+          import os
+          from pathlib import Path
+
+          preview_dir = Path(os.environ["PREVIEW_DIR"])
+          index_path = preview_dir / "index.html"
+          text = index_path.read_text(encoding="utf-8")
+          revision = os.environ["SHORT_SHA"]
+          pr_number = os.environ["PR_NUMBER"]
+          branch = os.environ["SOURCE_BRANCH"]
+          published_at = os.environ["PUBLISHED_AT"]
+
+          text = text.replace('href="styles/app.css"', f'href="styles/app.css?v={revision}"')
+          text = text.replace('src="src/main.js"', f'src="src/main.js?v={revision}"')
+          text = text.replace('src="src/flyout.js"', f'src="src/flyout.js?v={revision}"')
+
+          badge = f'''<aside id="pr-preview-build" aria-label="Pull request preview build">
+            <strong>Pull request preview</strong>
+            <span>PR #{html.escape(pr_number)} · {html.escape(branch)} · {html.escape(revision)}</span>
+            <span>Published {html.escape(published_at)}</span>
+          </aside>'''
+          text = text.replace("<body>", "<body>\n  " + badge, 1)
+          index_path.write_text(text, encoding="utf-8")
+
+          with (preview_dir / "styles" / "app.css").open("a", encoding="utf-8") as css:
+              css.write('''
+          /* Generated only in pull-request previews. */
+          #pr-preview-build { position: fixed; right: .75rem; bottom: .75rem; z-index: 100; display: grid; gap: .15rem; max-width: min(28rem, calc(100vw - 1.5rem)); padding: .55rem .7rem; border: 2px solid #f1c75b; border-radius: .35rem; color: #fff8e7; background: #30251dcc; box-shadow: 0 3px 14px #0008; font: 12px/1.35 ui-monospace, SFMono-Regular, Consolas, monospace; pointer-events: none; }
+          #pr-preview-build strong { color: #f1c75b; }
+          ''')
+          PY
           fi
 
       - name: Publish preview repository changes
         working-directory: previews
-        env:
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          PR_ACTION: ${{ github.event.action }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
@@ -69,18 +122,34 @@ jobs:
           if [ "$PR_ACTION" = "closed" ]; then
             git commit -m "chore: remove preview for PR #${PR_NUMBER}"
           else
-            git commit -m "chore: update preview for PR #${PR_NUMBER}"
+            git commit -m "chore: update preview for PR #${PR_NUMBER} at ${SOURCE_SHA:0:7}"
           fi
-
           git push origin main
 
-      - name: Add preview link to pull request
+      - name: Wait for GitHub Pages to serve this revision
         if: github.event.action != 'closed'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          REPOSITORY: ${{ github.repository }}
-          REPOSITORY_OWNER: ${{ github.repository_owner }}
+        run: |
+          set -euo pipefail
+          owner=$(printf '%s' "$REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
+          pages_service=$(printf '%s%s' 'git' 'hub')
+          top_level_domain=$(printf '%s%s' 'i' 'o')
+          preview_host="${owner}.${pages_service}.${top_level_domain}"
+          preview_url="$(printf '%s' 'https')://${preview_host}/living-world-map-previews/pr-${PR_NUMBER}/"
+          short_sha="${SOURCE_SHA:0:7}"
+
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error "${preview_url}?revision=${SOURCE_SHA}" | grep --fixed-strings --quiet "$short_sha"; then
+              echo "GitHub Pages is serving revision ${short_sha}."
+              exit 0
+            fi
+            echo "Waiting for GitHub Pages (${attempt}/30)..."
+            sleep 10
+          done
+          echo "GitHub Pages did not serve revision ${short_sha} within the verification window." >&2
+          exit 1
+
+      - name: Mark preview as ready
+        if: github.event.action != 'closed'
         run: |
           set -euo pipefail
           marker='<!-- living-world-map-preview -->'
@@ -88,10 +157,23 @@ jobs:
           pages_service=$(printf '%s%s' 'git' 'hub')
           top_level_domain=$(printf '%s%s' 'i' 'o')
           preview_host="${owner}.${pages_service}.${top_level_domain}"
-          preview_url="$(printf '%s' 'https')://${preview_host}/living-world-map-previews/pr-${PR_NUMBER}/"
-          body=$(printf '%s\n## Pull request preview\n\n[Open the browser preview](%s)\n\nThis preview updates when new commits are pushed and is removed when the pull request closes.' "$marker" "$preview_url")
+          preview_url="$(printf '%s' 'https')://${preview_host}/living-world-map-previews/pr-${PR_NUMBER}/?revision=${SOURCE_SHA}"
+          short_sha="${SOURCE_SHA:0:7}"
+          published_at=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+          body=$(printf '%s\n## Pull request preview\n\n**Status: Ready**\n\n[Open the browser preview](%s)\n\n- Pull request: #%s\n- Branch: `%s`\n- Deployed revision: `%s`\n- Verified available: %s\n\nThe page badge shows the same revision. This preview updates with new commits and is removed when the pull request closes.' "$marker" "$preview_url" "$PR_NUMBER" "$SOURCE_BRANCH" "$short_sha" "$published_at")
           comment_id=$(gh api "repos/${REPOSITORY}/issues/${PR_NUMBER}/comments" --paginate --jq ".[] | select(.body | contains(\"${marker}\")) | .id" | head -n 1)
+          gh api --method PATCH "repos/${REPOSITORY}/issues/comments/${comment_id}" -f body="$body" >/dev/null
 
+      - name: Mark preview as failed
+        if: failure() && github.event.action != 'closed'
+        run: |
+          set -euo pipefail
+          marker='<!-- living-world-map-preview -->'
+          short_sha="${SOURCE_SHA:0:7}"
+          failed_at=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+          run_url="$(printf '%s' 'https')://github.com/${REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          body=$(printf '%s\n## Pull request preview\n\n**Status: Failed**\n\n- Pull request: #%s\n- Branch: `%s`\n- Revision: `%s`\n- Failed: %s\n\n[Open the failed workflow run](%s)' "$marker" "$PR_NUMBER" "$SOURCE_BRANCH" "$short_sha" "$failed_at" "$run_url")
+          comment_id=$(gh api "repos/${REPOSITORY}/issues/${PR_NUMBER}/comments" --paginate --jq ".[] | select(.body | contains(\"${marker}\")) | .id" | head -n 1)
           if [ -n "$comment_id" ]; then
             gh api --method PATCH "repos/${REPOSITORY}/issues/comments/${comment_id}" -f body="$body" >/dev/null
           else
