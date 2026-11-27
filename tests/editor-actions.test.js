@@ -57,6 +57,17 @@ test("generated mountain duplication detaches the copy into a manual mountain", 
   assert.deepEqual([copy.x, copy.y], [60, 70]);
 });
 
+test("generated forest duplication detaches the copy into a manual tree", () => {
+  const map = world();
+  map.forests = [{ id: "generated-forest", x: 60, y: 70, sourceId: "forest-source", seed: 123, size: 39 }];
+  const copies = duplicateObjects(map, [{ kind: "forest", id: "generated-forest" }], [20, 20]);
+  const copy = map.forests.find(item => item.id === copies[0].id);
+  assert.equal(copy.sourceId, undefined);
+  assert.equal(copy.seed, undefined);
+  assert.equal(copy.suppressed, undefined);
+  assert.deepEqual([copy.x, copy.y], [80, 90]);
+});
+
 test("deletion removes settlements and every connected road", () => {
   const map = world();
   map.roads = [{ id: "road-1", from: "oak", to: "ford", points: [] }];
