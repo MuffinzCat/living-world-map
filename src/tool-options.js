@@ -21,7 +21,7 @@ export function showToolOptions(content, trigger = null) {
 }
 
 export function hideToolOptions(content) {
-  if (activeContent !== content) return;
+  if (!content || activeContent !== content) return;
   content.hidden = true;
   toolbar.hidden = true;
   toolbar.classList.remove("animate-open");
@@ -37,7 +37,7 @@ function syncTriggerStates() {
   document.querySelectorAll('[aria-controls="tool-options-toolbar"], [aria-controls="brush-controls"], [aria-controls="roads-controls"], [aria-controls="selection-controls"]').forEach(trigger => {
     const open = activeTrigger === trigger;
     trigger.setAttribute("aria-expanded", String(open));
-    if (trigger.id === "roads-mode" || trigger.id === "brush-mode" || trigger.matches("[data-placement]")) {
+    if (trigger.id === "roads-mode" || trigger.id === "brush-mode" || trigger.matches("[data-placement]") || trigger.matches('[data-mode="select"]')) {
       trigger.setAttribute("aria-pressed", String(open));
     }
   });
@@ -46,11 +46,21 @@ function syncTriggerStates() {
 document.addEventListener("click", event => {
   const trigger = event.target.closest('[data-mode="select"], [data-mode="brush"], [data-mode="pan"], [data-placement], #roads-mode');
   if (!trigger) return;
-  if (trigger.matches('[data-mode="pan"]')) {
+  const contentId = [...contentByTrigger].find(([selector]) => trigger.matches(selector))?.[1];
+  const content = contentId ? document.querySelector(`#${contentId}`) : null;
+  if (trigger.matches('[data-mode="pan"]')) hideToolOptions(activeContent);
+  else if (content) showToolOptions(content, trigger);
+});
+
+document.addEventListener("tool-change", event => {
+  const { tool, trigger } = event.detail;
+  if (tool === "pan") {
     hideToolOptions(activeContent);
     return;
   }
-  const contentId = [...contentByTrigger].find(([selector]) => trigger.matches(selector))?.[1];
+  const contentId = tool === "placement"
+    ? "placement-controls"
+    : [...contentByTrigger].find(([selector]) => trigger?.matches(selector) || (tool === "select" && selector === 'button[data-mode="select"]'))?.[1];
   const content = contentId ? document.querySelector(`#${contentId}`) : null;
   if (content) showToolOptions(content, trigger);
 });

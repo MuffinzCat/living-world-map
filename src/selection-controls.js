@@ -287,6 +287,9 @@ document.addEventListener("keydown", event => {
   else if ((event.key === "Delete" || event.key === "Backspace") && selected.length) { event.preventDefault(); deleteSelected(); }
   else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "d" && selected.length) { event.preventDefault(); duplicateSelected(); }
 });
+document.addEventListener("tool-change", event => {
+  if (event.detail.tool !== "select" && selected.length) clearSelection();
+});
 document.querySelector("#export-svg").addEventListener("click", () => {
   map.querySelectorAll(".is-selected, .selection-box, .road-edit-layer").forEach(node => node.classList.contains("is-selected") ? node.classList.remove("is-selected") : node.remove());
   setTimeout(refreshSelection);
