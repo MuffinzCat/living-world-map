@@ -8,6 +8,7 @@ import {
   editSettlement,
   moveRoadPoint,
   removeRoadPoint,
+  insertRoadPoint,
 } from "../src/editor-actions.js";
 
 function world() {
@@ -69,4 +70,12 @@ test("road bend points can be added, moved, and removed", () => {
   assert.deepEqual(map.roads[0].points, [[200, 160]]);
   removeRoadPoint(map, roadId, index);
   assert.deepEqual(map.roads[0].points, []);
+});
+
+test("road bend points insert at the clicked segment position", () => {
+  const map = world();
+  const roadId = addRoad(map, "oak", "ford");
+  const index = insertRoadPoint(map, roadId, [200, 150]);
+  assert.equal(index, 0);
+  assert.deepEqual(map.roads[0].points, [[200, 150]]);
 });

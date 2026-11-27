@@ -32,3 +32,14 @@ test("Road controls refresh settlements and use history for creation and bends",
   assert.match(source, /moveRoadPoint/);
   assert.match(source, /removeRoadPoint/);
 });
+
+test("road click adds a bend and deselection clears bend handles", async () => {
+  const roadSource = await read("src/road-controls.js");
+  const selectionSource = await read("src/selection-controls.js");
+  assert.match(roadSource, /road-click/);
+  assert.match(roadSource, /insertRoadPoint/);
+  assert.match(roadSource, /road-selected/);
+  assert.match(selectionSource, /road-click/);
+  assert.match(selectionSource, /road-selected/);
+  assert.match(selectionSource, /detail: \{ id: null \}/);
+});
