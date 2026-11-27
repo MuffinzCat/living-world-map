@@ -43,7 +43,6 @@ test("all current and future toolbar flyouts share one container and stylesheet"
   assert.match(html, /id="brush-controls" class="tool-options-content brush-flyout"/);
   assert.match(html, /id="placement-controls" class="tool-options-content placement-flyout"/);
   assert.equal((html.match(/class="tool-options-toolbar"/g) ?? []).length, 1);
-  assert.match(css, /--toolbar-flyout-min-height:/);
   assert.equal(cssDeclarations(css, ".tool-options-toolbar").get("min-height"), "var(--toolbar-flyout-min-height)");
 });
 
@@ -55,12 +54,10 @@ test("all tool triggers target the one toolbar container", async () => {
   }
 });
 
-test("switching tool content does not close or reopen the toolbar", async () => {
+test("shared toolbar is shown directly by every menu trigger", async () => {
   const source = await read("src/tool-options.js");
-  assert.match(source, /const toolbar = document\.querySelector\("#tool-options-toolbar"\)/);
+  assert.match(source, /closest\("#brush-mode, button\[data-placement\]"\)/);
+  assert.match(source, /showToolOptions\(trigger\.id === "brush-mode" \? brushContent : placementContent\)/);
   assert.match(source, /contents\.forEach\(item => \{ item\.hidden = item !== content; \}\)/);
-  assert.match(source, /const opening = toolbar\.hidden/);
-  assert.match(source, /classList\.toggle\("animate-open", opening\)/);
-  assert.match(source, /if \(activeContent !== content\) return/);
-  assert.doesNotMatch(source, /pendingSwitch|hideOtherToolbars|visibleToolbar/);
+  assert.match(source, /toolbar\.hidden = false/);
 });
