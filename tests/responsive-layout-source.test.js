@@ -55,13 +55,12 @@ test("tool menus stay outside the main toolbar so they resize the map view", asy
   assert.ok(html.indexOf("id=\"placement-controls\"") < html.indexOf("class=\"map-frame\""));
 });
 
-test("tool menu switching reuses the visible toolbar space without replaying animation", async () => {
+test("tool menu switching keeps animation suppressed until the menu closes", async () => {
   const shared = await read("src/tool-options.js");
-  const brush = await read("src/brush-controls.js");
-  const placement = await read("src/placement-controls.js");
+  const css = await read("styles/toolbar-flyout.css");
   assert.match(shared, /visibleToolbar && visibleToolbar !== target/);
-  assert.match(shared, /toolbar\.style\.animation = "none"/);
-  assert.match(shared, /hideOtherToolbars\(toolbar\)/);
-  assert.match(brush, /showToolOptions\(brushControls\)/);
-  assert.match(placement, /showToolOptions\(placementFlyout\)/);
+  assert.match(shared, /classList\.toggle\("skip-open-animation", switching\)/);
+  assert.match(shared, /classList\.remove\("is-open", "skip-open-animation"\)/);
+  assert.doesNotMatch(shared, /requestAnimationFrame/);
+  assert.equal(cssDeclarations(css, ".tool-options-toolbar.skip-open-animation").get("animation"), "none");
 });
