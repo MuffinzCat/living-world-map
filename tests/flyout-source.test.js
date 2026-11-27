@@ -47,6 +47,9 @@ test("shared tool-options controller opens only one content panel", async () => 
   assert.match(source, /getContents\(\)\.forEach\(item => \{ item\.hidden = item !== content; \}\)/);
   assert.match(source, /#roads-mode/);
   assert.match(source, /data-mode="select"/);
+  assert.match(source, /document\.addEventListener\("tool-change"/);
+  assert.match(source, /hideToolOptions\(activeContent\)/);
+  assert.match(source, /if \(!content \|\| activeContent !== content\) return/);
 });
 
 test("narrow screens use a full-width flyout without squeezing the map", () => {

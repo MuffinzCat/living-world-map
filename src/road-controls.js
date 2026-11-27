@@ -90,9 +90,20 @@ function mapPoint(event) {
   return [transformed.x, transformed.y];
 }
 
-cancelButton.addEventListener("click", () => {
+function cancelRoad(message = "Road creation cancelled.") {
+  selectedRoadId = null;
+  selectedPointIndex = null;
+  bendGesture = null;
+  refreshHandles();
   hideToolOptions(roadsControls);
-  status.textContent = "Road creation cancelled.";
+  document.querySelector('[data-mode="pan"]')?.click();
+  status.textContent = message;
+}
+
+cancelButton.addEventListener("click", () => cancelRoad());
+roadsButton.addEventListener("click", () => {
+  document.querySelector('[data-mode="pan"]')?.click();
+  showToolOptions(roadsControls, roadsButton);
 });
 createButton.addEventListener("click", () => {
   try {
@@ -181,7 +192,17 @@ map.addEventListener("pointerup", finishBend);
 map.addEventListener("pointercancel", finishBend);
 document.addEventListener("keydown", event => {
   if (event.key === "Escape" && isVisible()) {
-    hideToolOptions(roadsControls);
+    event.preventDefault();
+    cancelRoad("Road operation cancelled.");
+  }
+});
+document.addEventListener("tool-change", event => {
+  if (event.detail.tool === "roads") return;
+  if (selectedRoadId || selectedPointIndex !== null || bendGesture) {
+    selectedRoadId = null;
+    selectedPointIndex = null;
+    bendGesture = null;
+    refreshHandles();
   }
 });
 function isVisible() { return !roadsControls.hidden && !roadsControls.parentElement.hidden; }

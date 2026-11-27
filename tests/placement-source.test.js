@@ -23,7 +23,9 @@ test("pending placement can be cancelled and announces its state", () => {
   expectAttribute(status, "aria-live", "polite");
   assert.ok(openingTagWith(html, "id", "cancel-placement"));
   assert.match(source, /event\.key === "Escape"/);
-  assert.match(source, /setMode\("placement"\)/);
+  assert.match(source, /setMode\("placement"/);
+  assert.match(source, /setMode\("pan"\)/);
+  assert.match(source, /modeHelp\.pan/);
 });
 
 test("one valid left click completes the requested placement", () => {

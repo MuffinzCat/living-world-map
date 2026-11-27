@@ -43,3 +43,12 @@ test("road click adds a bend and deselection clears bend handles", async () => {
   assert.match(selectionSource, /road-selected/);
   assert.match(selectionSource, /detail: \{ id: null \}/);
 });
+
+test("road cancellation and Escape return to Move map and clear road state", async () => {
+  const source = await read("src/road-controls.js");
+  assert.match(source, /function cancelRoad/);
+  assert.match(source, /selectedRoadId = null/);
+  assert.match(source, /selectedPointIndex = null/);
+  assert.match(source, /\[data-mode="pan"\].*\.click\(\)/);
+  assert.match(source, /event\.key === "Escape"/);
+});
