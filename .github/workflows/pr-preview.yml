@@ -80,11 +80,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPOSITORY: ${{ github.repository }}
-          PREVIEW_URL: https://<scrubbed-url-domain>/living-world-map-previews/pr-$%7B%7B github.event.pull_request.number }}/
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
         run: |
           set -euo pipefail
           marker='<!-- living-world-map-preview -->'
-          body=$(printf '%s\nPreview: %s\n\nThis preview updates when new commits are pushed and is removed when the pull request closes.' "$marker" "$PREVIEW_URL")
+          owner=$(printf '%s' "$REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
+          preview_url="<scrubbed-url-domain>"
+          body=$(printf '%s\nPreview: %s\n\nThis preview updates when new commits are pushed and is removed when the pull request closes.' "$marker" "$preview_url")
           comment_id=$(gh api "repos/${REPOSITORY}/issues/${PR_NUMBER}/comments" --paginate --jq ".[] | select(.body | contains(\"${marker}\")) | .id" | head -n 1)
 
           if [ -n "$comment_id" ]; then
