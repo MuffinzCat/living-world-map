@@ -15,3 +15,15 @@ test("renderer draws non-empty notes and brush strokes", () => {
   assert.match(source, /class: "map-notes"/);
   assert.match(source, /world\.brushStrokes/);
 });
+
+test("all brush types render together in chronological order", () => {
+  assert.match(source, /for \(const stroke of world\.brushStrokes\) renderBrushStroke\(terrainLayer, stroke\)/);
+  assert.doesNotMatch(source, /world\.brushStrokes\.filter/);
+});
+
+test("mountain symbols remain separate from painted terrain", () => {
+  const mountainLayer = source.slice(source.indexOf('class: "layer mountain-layer"'), source.indexOf('class: "layer settlement-layer"'));
+  assert.match(mountainLayer, /drawMountainRange/);
+  assert.match(mountainLayer, /world\.mountains/);
+  assert.doesNotMatch(mountainLayer, /renderBrushStroke/);
+});
