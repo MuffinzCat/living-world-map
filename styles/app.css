@@ -1,5 +1,5 @@
-:root { color-scheme: light; font-family: Georgia, "Times New Roman", serif; color: #382b20; background: #e9dfc8; --page: #e9dfc8; --paper: #f7eedb; --panel-border: #b5a17e; --header: #3d3026; --header-text: #f5e9cf; --toolbar: #d7c6a5; --control: #fbf3e0; --control-hover: #ead9b5; --control-border: #998261; --control-text: #382b20; --pressed: #604936; --pressed-text: #fff8e7; --focus: #956329; --map-surround: #82745d; --textarea: #fffaf0; --textarea-text: #30281f; --flyout-shadow: #251b1260; --flyout-width: min(38rem, 38vw); }
-:root[data-theme="dark"] { color-scheme: dark; color: #eee7dc; background: #181614; --page: #181614; --paper: #282521; --panel-border: #625a50; --header: #171513; --header-text: #f5e9cf; --toolbar: #35312c; --control: #27231f; --control-hover: #443e37; --control-border: #776d61; --control-text: #f2ece2; --pressed: #886b50; --pressed-text: #fffaf0; --focus: #e1a958; --map-surround: #4a433a; --textarea: #1d1b18; --textarea-text: #f1ebe2; --flyout-shadow: #000a; }
+:root { color-scheme: light; font-family: Georgia, "Times New Roman", serif; color: #382b20; background: #e9dfc8; --page: #e9dfc8; --paper: #f7eedb; --panel-border: #b5a17e; --header: #3d3026; --header-text: #f5e9cf; --toolbar: #d7c6a5; --control: #fbf3e0; --control-hover: #ead9b5; --control-border: #998261; --control-text: #382b20; --pressed: #604936; --pressed-text: #fff8e7; --focus: #956329; --map-surround: #82745d; --textarea: #fffaf0; --textarea-text: #30281f; --flyout-shadow: #251b1260; --tooltip: #2d241d; --tooltip-text: #fff8e7; --flyout-width: min(38rem, 38vw); }
+:root[data-theme="dark"] { color-scheme: dark; color: #eee7dc; background: #181614; --page: #181614; --paper: #282521; --panel-border: #625a50; --header: #171513; --header-text: #f5e9cf; --toolbar: #35312c; --control: #27231f; --control-hover: #443e37; --control-border: #776d61; --control-text: #f2ece2; --pressed: #886b50; --pressed-text: #fffaf0; --focus: #e1a958; --map-surround: #4a433a; --textarea: #1d1b18; --textarea-text: #f1ebe2; --flyout-shadow: #000a; --tooltip: #f2ece2; --tooltip-text: #211e1a; }
 * { box-sizing: border-box; }
 html, body { width: 100%; height: 100%; overflow: hidden; }
 body { display: flex; min-height: 0; margin: 0; flex-direction: column; color: inherit; background: var(--page); }
@@ -22,6 +22,10 @@ button { cursor: pointer; }
 button:hover { background: var(--control-hover); }
 button[aria-pressed="true"] { color: var(--pressed-text); background: var(--pressed); }
 button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible, dialog:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.icon-button { position: relative; display: inline-grid; width: 2.75rem; min-height: 2.75rem; place-items: center; padding: .4rem; }
+.mode-icon { width: 1.65rem; height: 1.65rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+.icon-button::after { position: absolute; z-index: 20; top: calc(100% + .45rem); left: 50%; padding: .3rem .5rem; border-radius: 3px; color: var(--tooltip-text); background: var(--tooltip); content: attr(data-tooltip); font-size: .8rem; line-height: 1; white-space: nowrap; opacity: 0; pointer-events: none; transform: translate(-50%, -.2rem); transition: opacity 120ms ease, transform 120ms ease; }
+.icon-button:hover::after, .icon-button:focus-visible::after { opacity: 1; transform: translate(-50%, 0); }
 .toolbar label, .toolbar output, #placement-status { font-size: .9rem; }
 #placement-status { min-width: 12rem; }
 #settlement-name { width: 10rem; }
