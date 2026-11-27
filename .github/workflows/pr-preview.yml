@@ -86,7 +86,7 @@ jobs:
           marker='<!-- living-world-map-preview -->'
           owner=$(printf '%s' "$REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
           preview_url="<scrubbed-url-domain>"
-          body=$(printf '%s\nPreview: %s\n\nThis preview updates when new commits are pushed and is removed when the pull request closes.' "$marker" "$preview_url")
+          body=$(printf '%s\n## Pull request preview\n\n[Open the browser preview](%s)\n\nThis preview updates when new commits are pushed and is removed when the pull request closes.' "$marker" "$preview_url")
           comment_id=$(gh api "repos/${REPOSITORY}/issues/${PR_NUMBER}/comments" --paginate --jq ".[] | select(.body | contains(\"${marker}\")) | .id" | head -n 1)
 
           if [ -n "$comment_id" ]; then
