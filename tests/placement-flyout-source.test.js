@@ -15,16 +15,25 @@ test("placement controls use one contextual toolbar flyout", async () => {
 
 test("settlement flyout has concise title, name, type, and cancel controls", async () => {
   const html = await read("index.html");
-  assert.match(html, /id="placement-title">Place settlement/);
+  assert.match(html, /class="placement-content-row"[\s\S]*?id="placement-title">Place settlement/);
   assert.match(html, /id="settlement-fields"[\s\S]*?for="settlement-name">Name[\s\S]*?id="settlement-name"[\s\S]*?for="settlement-type">Type[\s\S]*?id="settlement-type"/);
-  assert.match(html, /id="cancel-placement"/);
+  assert.match(html, /class="placement-action-row">\s*<button id="cancel-placement"/);
 });
 
 test("settlement controls wrap within the flyout instead of overflowing", async () => {
   const css = await read("styles/placement-flyout.css");
-  assert.match(css, /\.placement-flyout \{[^}]*flex-wrap: wrap;[^}]*width: fit-content;[^}]*max-width:/s);
+  assert.match(css, /\.placement-flyout \{[^}]*flex-direction: column;[^}]*align-items: stretch;[^}]*width: fit-content;[^}]*max-width:/s);
+  assert.match(css, /\.placement-content-row \{[^}]*display: flex;[^}]*flex-wrap: wrap;[^}]*min-width: 0;/s);
   assert.match(css, /#settlement-fields \{[^}]*display: flex;[^}]*flex-wrap: wrap;[^}]*min-width: 0;/s);
   assert.match(css, /#settlement-name \{[^}]*min-width: 0;[^}]*max-width: 100%;/s);
+});
+
+test("cancel placement stays visibly contained in a dedicated action row", async () => {
+  const html = await read("index.html");
+  const flyout = html.match(/id="placement-controls"[\s\S]*?<span id="placement-status"/)?.[0] ?? "";
+  assert.match(flyout, /<div class="placement-action-row">\s*<button id="cancel-placement"/);
+  const css = await read("styles/placement-flyout.css");
+  assert.match(css, /\.placement-action-row \{[^}]*display: flex;[^}]*justify-content: flex-end;[^}]*width: 100%;[^}]*border-top:/s);
   assert.match(css, /#cancel-placement \{[^}]*flex: 0 0 auto;/s);
 });
 
