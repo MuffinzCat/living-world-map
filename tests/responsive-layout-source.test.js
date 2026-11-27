@@ -29,15 +29,18 @@ test("narrow headers wrap actions while preserving map space", async () => {
   assert.match(css, /\.toolbar-spacer \{ flex-basis: 100%; height: 0; \}/);
 });
 
-test("all flyouts remain within the viewport", async () => {
-  const app = await read("styles/app.css");
+test("JSON panel remains within the viewport", async () => {
+  const css = await read("styles/app.css");
+  assert.equal(cssDeclarations(css, ".data-panel[open]").get("max-width"), "100vw");
+  assert.equal(cssDeclarations(css, ".data-panel[open]").get("max-height"), "100dvh");
+});
+
+test("compact tool flyouts use the toolbar width without scrollbars", async () => {
   const brush = await read("styles/brush-flyout.css");
   const placement = await read("styles/placement-flyout.css");
-  assert.equal(cssDeclarations(app, ".data-panel[open]").get("max-width"), "100vw");
-  assert.equal(cssDeclarations(app, ".data-panel[open]").get("max-height"), "100dvh");
-  for (const [css, selector] of [[brush, ".brush-flyout"], [placement, ".placement-flyout"]]) {
-    assert.match(cssDeclarations(css, selector).get("max-width"), /100vw/);
-    assert.match(cssDeclarations(css, selector).get("max-height"), /dvh/);
-    assert.equal(cssDeclarations(css, selector).get("overflow"), "auto");
+  for (const [css, tool, flyout] of [[brush, ".brush-tool", ".brush-flyout"], [placement, ".placement-tool", ".placement-flyout"]]) {
+    assert.match(css, new RegExp(`${tool.replace(".", "\\.")} \\{ position: static; \\}`));
+    assert.match(css, new RegExp(`${flyout.replace(".", "\\.")} \\{ right: 0; left: 0; width: auto;`));
+    assert.doesNotMatch(cssDeclarations(css, flyout).get("overflow") ?? "", /auto|scroll/);
   }
 });
