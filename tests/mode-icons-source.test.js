@@ -30,19 +30,20 @@ test("settlement movement reuses a separated map movement symbol", async () => {
   assert.equal((html.match(/class="move-symbol"/g) ?? []).length, 2);
   assert.match(html, /data-mode="select"[\s\S]*?class="move-symbol-outline"[\s\S]*?class="move-symbol"/);
   const css = await read("styles/app.css");
-  assert.match(css, /\.move-symbol-outline \{[^}]*stroke-width: 3;/s);
+  assert.match(css, /\.move-symbol-outline \{[^}]*stroke-width: 4;/s);
   assert.match(css, /\.move-symbol-outline \{[^}]*vector-effect: non-scaling-stroke;/s);
 });
 
-test("brush icon uses a filled classical paintbrush silhouette", async () => {
+test("brush icon uses a detached stick and an outlined head with filled paint", async () => {
   const html = await read("index.html");
   const brush = html.match(/id="brush-mode"[\s\S]*?<\/button>/)?.[0] ?? "";
-  assert.match(brush, /class="mode-icon paintbrush-icon"/);
-  assert.match(brush, /class="paintbrush-handle"/);
-  assert.match(brush, /class="paintbrush-ferrule"/);
-  assert.match(brush, /class="paintbrush-bristles"/);
+  assert.match(brush, /class="paintbrush-stick"/);
+  assert.match(brush, /class="paintbrush-head"/);
+  assert.match(brush, /class="paint-splotch"/);
   const css = await read("styles/app.css");
-  assert.match(css, /\.paintbrush-icon \{[^}]*fill: currentColor;[^}]*stroke: none;/s);
+  assert.match(css, /\.paintbrush-stick \{[^}]*fill: none;[^}]*stroke: currentColor;/s);
+  assert.match(css, /\.paintbrush-head \{[^}]*fill: none;[^}]*stroke: currentColor;/s);
+  assert.match(css, /\.paint-splotch \{[^}]*fill: currentColor;[^}]*stroke: none;/s);
 });
 
 test("icon controls retain mode and pressed-state hooks", async () => {
