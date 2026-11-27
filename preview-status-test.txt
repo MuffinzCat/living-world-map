@@ -1,0 +1,1 @@
+Temporary file used to verify preview publishing status, revision metadata, preview-only page badge, updates, and cleanup.
