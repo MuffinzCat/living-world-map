@@ -35,34 +35,32 @@ test("JSON panel remains within the viewport", async () => {
   assert.equal(cssDeclarations(css, ".data-panel[open]").get("max-height"), "100dvh");
 });
 
-test("all current and future toolbar flyouts share one stylesheet and minimum size", async () => {
+test("all current and future toolbar flyouts share one container and stylesheet", async () => {
   const html = await read("index.html");
   const css = await read("styles/toolbar-flyout.css");
   assert.match(html, /styles\/toolbar-flyout\.css/);
-  assert.doesNotMatch(html, /styles\/(?:brush|placement)-flyout\.css/);
-  assert.match(html, /id="brush-controls" class="tool-options-toolbar brush-flyout"/);
-  assert.match(html, /id="placement-controls" class="tool-options-toolbar placement-flyout"/);
+  assert.match(html, /id="tool-options-toolbar" class="tool-options-toolbar"/);
+  assert.match(html, /id="brush-controls" class="tool-options-content brush-flyout"/);
+  assert.match(html, /id="placement-controls" class="tool-options-content placement-flyout"/);
+  assert.equal((html.match(/class="tool-options-toolbar"/g) ?? []).length, 1);
   assert.match(css, /--toolbar-flyout-min-height:/);
   assert.equal(cssDeclarations(css, ".tool-options-toolbar").get("min-height"), "var(--toolbar-flyout-min-height)");
-  assert.equal(cssDeclarations(css, ".tool-options-toolbar").get("align-content"), "center");
 });
 
-test("tool menus stay outside the main toolbar so they resize the map view", async () => {
+test("all tool triggers target the one toolbar container", async () => {
   const html = await read("index.html");
-  const toolbarEnd = html.indexOf("</div>\n    <div id=\"brush-controls\"");
-  assert.ok(toolbarEnd > html.indexOf("class=\"toolbar mode-toolbar\""));
-  assert.ok(html.indexOf("id=\"brush-controls\"") < html.indexOf("class=\"map-frame\""));
-  assert.ok(html.indexOf("id=\"placement-controls\"") < html.indexOf("class=\"map-frame\""));
+  for (const id of ["add-settlement", "add-mountain", "brush-mode"]) {
+    const button = html.match(new RegExp(`<button[^>]*id="${id}"[^>]*>`))?.[0] ?? "";
+    assert.match(button, /aria-controls="tool-options-toolbar"/);
+  }
 });
 
-test("cross-toolbar switching survives the old toolbar close callback", async () => {
-  const shared = await read("src/tool-options.js");
-  const css = await read("styles/toolbar-flyout.css");
-  assert.match(shared, /let pendingSwitchTarget = null/);
-  assert.match(shared, /pendingSwitchTarget === toolbar/);
-  assert.match(shared, /pendingSwitchTarget = target/);
-  assert.match(shared, /pendingSwitchTarget === null\) visibleToolbar = null/);
-  assert.match(shared, /classList\.toggle\("animate-open", !switching && toolbar\.hidden\)/);
-  assert.match(cssDeclarations(css, ".tool-options-toolbar").get("animation"), /^none/);
-  assert.match(cssDeclarations(css, ".tool-options-toolbar.animate-open").get("animation"), /reveal-tool-options/);
+test("switching tool content does not close or reopen the toolbar", async () => {
+  const source = await read("src/tool-options.js");
+  assert.match(source, /const toolbar = document\.querySelector\("#tool-options-toolbar"\)/);
+  assert.match(source, /contents\.forEach\(item => \{ item\.hidden = item !== content; \}\)/);
+  assert.match(source, /const opening = toolbar\.hidden/);
+  assert.match(source, /classList\.toggle\("animate-open", opening\)/);
+  assert.match(source, /if \(activeContent !== content\) return/);
+  assert.doesNotMatch(source, /pendingSwitch|hideOtherToolbars|visibleToolbar/);
 });
