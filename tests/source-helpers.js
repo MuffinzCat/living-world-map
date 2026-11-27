@@ -18,7 +18,7 @@ export function expectLoaded(html, kind, path) {
 
 export function cssDeclarations(css, selector) {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = css.match(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`));
+  const match = css.match(new RegExp(`(?:^|})\\s*${escaped}\\s*\\{([^}]*)\\}`, "m"));
   assert.ok(match, `Expected CSS rule for ${selector}`);
   return new Map(match[1].split(";").map(part => part.trim()).filter(Boolean).map(part => {
     const separator = part.indexOf(":");
