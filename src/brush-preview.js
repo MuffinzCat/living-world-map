@@ -26,7 +26,7 @@ export function renderBrushPreview(layer, stroke, world) {
       group.setAttribute("transform", `translate(${forest.x} ${forest.y})`);
       const path = layer.ownerDocument.createElementNS(layer.namespaceURI, "path");
       path.setAttribute("d", "M 0 -20 l -14 25 h 9 l -4 8 h 18 l -4 -8 h 9 Z");
-      path.setAttribute("fill", "#647854");
+      path.setAttribute("fill", "#4f6942");
       path.setAttribute("stroke", "#51402d");
       path.setAttribute("stroke-width", "1");
       group.append(path);

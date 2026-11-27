@@ -46,8 +46,8 @@ export function uniqueForestStrokeId(world) {
 export function generateForestSymbols(world, stroke) {
   const random = randomFrom(hashString(`${stroke.id}:${JSON.stringify(stroke.points)}:${stroke.size}`));
   const radius = Math.max(5, stroke.size / 2);
-  const spacing = Math.max(24, radius);
-  const minimumSpacing = (a, b) => (a + b) * 0.32;
+  const spacing = Math.max(12, radius * 0.6);
+  const minimumSpacing = (a, b) => (a + b) * 0.18;
   const symbolSize = () => Math.round((34 + random() * 10) * 10) / 10;
   const candidates = [];
 
