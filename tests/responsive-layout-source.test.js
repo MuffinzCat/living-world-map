@@ -35,17 +35,16 @@ test("JSON panel remains within the viewport", async () => {
   assert.equal(cssDeclarations(css, ".data-panel[open]").get("max-height"), "100dvh");
 });
 
-test("tool menus share the same full-width sliding toolbar flow", async () => {
+test("all current and future toolbar flyouts share one stylesheet and minimum size", async () => {
   const html = await read("index.html");
-  const css = await read("styles/app.css");
-  const shared = cssDeclarations(css, ".tool-options-toolbar");
-  assert.equal(shared.get("position"), "relative");
-  assert.equal(shared.get("width"), "100%");
-  assert.equal(shared.get("border-top"), "0");
+  const css = await read("styles/toolbar-flyout.css");
+  assert.match(html, /styles\/toolbar-flyout\.css/);
+  assert.doesNotMatch(html, /styles\/(?:brush|placement)-flyout\.css/);
   assert.match(html, /id="brush-controls" class="tool-options-toolbar brush-flyout"/);
   assert.match(html, /id="placement-controls" class="tool-options-toolbar placement-flyout"/);
-  assert.match(css, /reveal-tool-options/);
-  assert.match(css, /prefers-reduced-motion: reduce/);
+  assert.match(css, /--toolbar-flyout-min-height:/);
+  assert.equal(cssDeclarations(css, ".tool-options-toolbar").get("min-height"), "var(--toolbar-flyout-min-height)");
+  assert.equal(cssDeclarations(css, ".tool-options-toolbar").get("align-content"), "center");
 });
 
 test("tool menus stay outside the main toolbar so they resize the map view", async () => {
