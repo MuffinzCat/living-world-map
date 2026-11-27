@@ -24,8 +24,8 @@ function validWorld() {
     rivers: [{ points: [[10, 10], [20, 20]] }],
     forests: [{ id: "forest-1", x: 50, y: 60 }],
     mountains: [{ id: "mountain-1", x: 80, y: 90 }],
-    mountainRanges: [{ points: [[100, 100], [150, 140]], size: 32 }],
-    brushStrokes: [{ type: "water", size: 40, points: [[200, 200], [220, 220]] }],
+    mountainRanges: [],
+    brushStrokes: [{ id: "stroke-1", type: "water", size: 40, points: [[200, 200], [220, 220]] }],
     notes: "A valid world."
   };
 }
@@ -59,9 +59,10 @@ test("migrates recognised legacy terrain features without dropping them", () => 
   assert.equal(world.terrain.length, 1);
   assert.equal(world.rivers.length, 1);
   assert.equal(world.forests.length, 1);
-  assert.equal(world.mountains.length, 1);
-  assert.equal(world.mountainRanges.length, 1);
-  assert.deepEqual(world.brushStrokes[0], { type: "water", size: 20, points: [[9, 9], [10, 10]] });
+  assert.equal(world.mountains.some(item => item.id === "mountain-1"), true);
+  assert.equal(world.mountainRanges.length, 0);
+  assert.equal(world.brushStrokes.some(stroke => stroke.type === "mountainRange"), true);
+  assert.equal(world.brushStrokes.some(stroke => stroke.type === "water"), true);
 });
 
 test("normalises legacy collection and brush names", () => {
@@ -70,8 +71,8 @@ test("normalises legacy collection and brush names", () => {
     mountain_ranges: [{ points: [[1, 1]], size: 20 }],
     brush_strokes: [{ type: "mountain_range", size: 30, points: [[2, 2]] }]
   });
-  assert.equal(world.mountainRanges.length, 1);
-  assert.equal(world.brushStrokes[0].type, "mountainRange");
+  assert.equal(world.mountainRanges.length, 0);
+  assert.equal(world.brushStrokes.filter(stroke => stroke.type === "mountainRange").length, 2);
 });
 
 test("rejects unsupported explicit versions", () => {

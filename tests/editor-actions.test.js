@@ -46,6 +46,17 @@ test("mixed duplication creates one corresponding copy per object with one offse
   assert.equal(new Set(map.settlements.map(item => item.id)).size, 3);
 });
 
+test("generated mountain duplication detaches the copy into a manual mountain", () => {
+  const map = world();
+  map.mountains = [{ id: "generated-mountain", x: 40, y: 50, sourceId: "source-1", seed: 123, size: 32 }];
+  const copies = duplicateObjects(map, [{ kind: "mountain", id: "generated-mountain" }], [20, 20]);
+  const copy = map.mountains.find(item => item.id === copies[0].id);
+  assert.equal(copy.sourceId, undefined);
+  assert.equal(copy.seed, undefined);
+  assert.equal(copy.suppressed, undefined);
+  assert.deepEqual([copy.x, copy.y], [60, 70]);
+});
+
 test("deletion removes settlements and every connected road", () => {
   const map = world();
   map.roads = [{ id: "road-1", from: "oak", to: "ford", points: [] }];
