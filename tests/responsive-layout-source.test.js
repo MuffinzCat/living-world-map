@@ -35,20 +35,23 @@ test("JSON panel remains within the viewport", async () => {
   assert.equal(cssDeclarations(css, ".data-panel[open]").get("max-height"), "100dvh");
 });
 
-test("brush flyout uses toolbar width on narrow screens", async () => {
-  const css = await read("styles/brush-flyout.css");
-  assert.match(css, /\.brush-tool \{ position: static; \}/);
-  assert.match(css, /\.brush-flyout \{ right: 0; left: 0; width: auto;/);
+test("tool menus share the same full-width sliding toolbar flow", async () => {
+  const html = await read("index.html");
+  const css = await read("styles/app.css");
+  const shared = cssDeclarations(css, ".tool-options-toolbar");
+  assert.equal(shared.get("position"), "relative");
+  assert.equal(shared.get("width"), "100%");
+  assert.equal(shared.get("border-top"), "0");
+  assert.match(shared.get("animation"), /reveal-tool-options/);
+  assert.match(html, /id="brush-controls" class="tool-options-toolbar brush-flyout"/);
+  assert.match(html, /id="placement-controls" class="tool-options-toolbar placement-flyout"/);
+  assert.match(css, /prefers-reduced-motion: reduce/);
 });
 
-test("placement controls open as a full-width sliding toolbar", async () => {
-  const css = await read("styles/placement-flyout.css");
-  const source = await read("src/placement-controls.js");
-  const flyout = cssDeclarations(css, ".placement-flyout");
-  assert.equal(flyout.get("position"), "relative");
-  assert.equal(flyout.get("width"), "100%");
-  assert.equal(flyout.get("border-top"), "0");
-  assert.match(flyout.get("animation"), /reveal-placement-toolbar/);
-  assert.doesNotMatch(source, /append\(placementFlyout\)/);
-  assert.match(css, /prefers-reduced-motion: reduce/);
+test("tool menus stay outside the main toolbar so they resize the map view", async () => {
+  const html = await read("index.html");
+  const toolbarEnd = html.indexOf("</div>\n    <div id=\"brush-controls\"");
+  assert.ok(toolbarEnd > html.indexOf("class=\"toolbar mode-toolbar\""));
+  assert.ok(html.indexOf("id=\"brush-controls\"") < html.indexOf("class=\"map-frame\""));
+  assert.ok(html.indexOf("id=\"placement-controls\"") < html.indexOf("class=\"map-frame\""));
 });
