@@ -14,10 +14,25 @@ test("map modes use accessible inline icon buttons", async () => {
   assert.equal((html.match(/aria-hidden="true"/g) ?? []).length, 3);
 });
 
+test("map movement is first and selected by default", async () => {
+  const html = await read("index.html");
+  assert.ok(html.indexOf('data-mode="pan"') < html.indexOf('data-mode="select"'));
+  assert.match(html, /data-mode="pan"[^>]*aria-label="Move map"[^>]*aria-pressed="true"/);
+  assert.match(html, /data-mode="select"[^>]*aria-label="Move settlements"[^>]*aria-pressed="false"/);
+  assert.match(html, /src="src\/default-mode\.js"/);
+  const source = await read("src/default-mode.js");
+  assert.match(source, /button\[data-mode="pan"\]/);
+  assert.match(source, /\.click\(\)/);
+});
+
+test("settlement movement reuses the map movement symbol", async () => {
+  const html = await read("index.html");
+  assert.equal((html.match(/class="move-symbol"/g) ?? []).length, 2);
+  assert.match(html, /data-mode="select"[\s\S]*?<g transform="translate\(13 13\) scale\(\.38\)">/);
+});
+
 test("icon controls retain mode and pressed-state hooks", async () => {
   const html = await read("index.html");
-  assert.match(html, /data-mode="select"[^>]*aria-pressed="true"/);
-  assert.match(html, /data-mode="pan"[^>]*aria-pressed="false"/);
   assert.match(html, /id="brush-mode"[^>]*data-mode="brush"[^>]*aria-label="Brush"[^>]*data-tooltip="Brush"[^>]*aria-pressed="false"/);
 });
 
