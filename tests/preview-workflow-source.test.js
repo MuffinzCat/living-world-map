@@ -27,8 +27,10 @@ test("preview metadata is generated only in the copied preview", async () => {
   assert.doesNotMatch(sourceCss, /pr-preview-build/);
 });
 
-test("preview workflow preserves cleanup and same-repository restriction", async () => {
+test("preview workflow uses the safe pull request trigger", async () => {
   const workflow = await read(".github/workflows/pr-preview.yml");
+  assert.match(workflow, /^\s*pull_request:\s*$/m);
+  assert.doesNotMatch(workflow, /pull_request_target/);
   assert.match(workflow, /head\.repo\.full_name == github\.repository/);
   assert.match(workflow, /types: \[opened, reopened, synchronize, closed\]/);
   assert.match(workflow, /rm -rf "\$preview_dir"/);
