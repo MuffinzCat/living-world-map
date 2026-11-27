@@ -42,6 +42,13 @@ test("the editor fits inside the browser viewport without page scrolling", () =>
   assert.match(styles, /\.map-frame \{[^}]*min-height: 0[^}]*flex: 1 1 auto[^}]*overflow: hidden/s);
 });
 
+test("shared tool-options controller opens only one content panel", async () => {
+  const source = await readFile(new URL("src/tool-options.js", root), "utf8");
+  assert.match(source, /contents\.forEach\(item => \{ item\.hidden = item !== content; \}\)/);
+  assert.match(source, /#roads-mode/);
+  assert.match(source, /data-mode="select"/);
+});
+
 test("narrow screens use a full-width flyout without squeezing the map", () => {
   assert.match(styles, /@media \(max-width: 700px\)/);
   assert.match(styles, /--flyout-width: 100vw/);
