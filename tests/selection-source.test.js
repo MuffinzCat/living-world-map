@@ -5,24 +5,32 @@ import test from "node:test";
 const root = new URL("../", import.meta.url);
 const read = path => readFile(new URL(path, root), "utf8");
 
-test("selection controls are loaded with shared object actions", async () => {
+test("selection controls are loaded in the shared tool-options toolbar", async () => {
   const page = await read("index.html");
   const source = await read("src/selection-controls.js");
   assert.match(page, /styles\/selection\.css/);
   assert.match(page, /src\/selection-controls\.js/);
+  assert.match(source, /optionsToolbar\.append\(selectionControls\)/);
+  assert.match(source, /showToolOptions\(selectionControls\)/);
   assert.match(source, /id="duplicate-selection"/);
   assert.match(source, /id="delete-selection"/);
+  assert.match(source, /id="clear-selection"/);
 });
 
-test("settlements and manual mountains can be selected", async () => {
+test("settlements and manual mountains support click and box selection", async () => {
   const source = await read("src/selection-controls.js");
-  assert.match(source, /closest\("\.settlement"\)/);
+  const styles = await read("styles/selection.css");
+  assert.match(source, /matches\("\.settlement"\)/);
   assert.match(source, /mountain-symbol\[data-object-kind=/);
-  assert.match(source, /is-selected/);
+  assert.match(source, /startBoxSelection/);
+  assert.match(source, /getBBox\(\)/);
+  assert.match(source, /event\.shiftKey/);
+  assert.match(styles, /\.selection-box/);
 });
 
-test("delete and duplicate edits use history and preserve valid roads", async () => {
+test("delete and duplicate apply to the full selection through history", async () => {
   const source = await read("src/selection-controls.js");
+  assert.match(source, /const targets = \[\.\.\.selected\]/);
   assert.match(source, /history-action-start/);
   assert.match(source, /history-action-finish/);
   assert.match(source, /world\.roads = world\.roads\.filter/);
