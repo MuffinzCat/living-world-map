@@ -35,7 +35,7 @@ test("JSON panel remains within the viewport", async () => {
   assert.equal(cssDeclarations(css, ".data-panel[open]").get("max-height"), "100dvh");
 });
 
-test("all current and future toolbar flyouts share one container and stylesheet", async () => {
+test("toolbar flyouts share one container and stylesheet", async () => {
   const html = await read("index.html");
   const css = await read("styles/toolbar-flyout.css");
   assert.match(html, /styles\/toolbar-flyout\.css/);
