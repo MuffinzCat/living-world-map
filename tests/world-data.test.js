@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   CURRENT_FORMAT_VERSION,
+  calculateAuthoredBounds,
+  exportWorldBounds,
   migrateWorld,
   serialiseWorld,
   validateWorld
@@ -11,6 +13,8 @@ function validWorld() {
   return {
     formatVersion: CURRENT_FORMAT_VERSION,
     canvas: { width: 1200, height: 800 },
+    bounds: { left: -500, top: -300, right: 1500, bottom: 900 },
+    initialView: { x: -600, y: -400, width: 1200, height: 800 },
     terrain: [{ type: "land", points: [[0, 0], [100, 0], [100, 100]] }],
     settlements: [
       { id: "oak", name: "Oak Haven", type: "town", x: 100, y: 120 },
@@ -131,4 +135,66 @@ test("serialises only canonical validated data", () => {
   assert.equal(saved.formatVersion, CURRENT_FORMAT_VERSION);
   assert.ok(Array.isArray(saved.brushStrokes));
   assert.equal("brush_strokes" in saved, false);
+});
+
+test("calculates empty, positive, negative, and mixed authored bounds", () => {
+  assert.equal(calculateAuthoredBounds({}), null);
+  assert.deepEqual(calculateAuthoredBounds({
+    settlements: [{ x: 10, y: 20 }, { x: 100, y: 200 }]
+  }), { left: 10, top: 20, right: 100, bottom: 200 });
+  assert.deepEqual(calculateAuthoredBounds({
+    mountains: [{ x: -100, y: -50 }, { x: -10, y: -5 }]
+  }), { left: -100, top: -50, right: -10, bottom: -5 });
+  assert.deepEqual(calculateAuthoredBounds({
+    forests: [{ x: -40, y: 30 }],
+    roads: [{ points: [[100, -20]] }]
+  }), { left: -40, top: -20, right: 100, bottom: 30 });
+});
+
+test("preserves negative coordinates across every canonical object type", () => {
+  const world = validateWorld({
+    formatVersion: 2,
+    canvas: { width: 1200, height: 800 },
+    terrain: [{ type: "land", points: [[-500, -400], [-200, -100]] }],
+    settlements: [
+      { id: "oak", name: "Oak", type: "town", x: -300, y: -250 },
+      { id: "ford", name: "Ford", type: "village", x: 300, y: 250 }
+    ],
+    roads: [{ id: "road-1", from: "oak", to: "ford", points: [[-450, -350]] }],
+    rivers: [{ points: [[-700, 100], [-600, 200]] }],
+    forests: [{ id: "forest-1", x: -800, y: 300 }],
+    mountains: [{ id: "mountain-1", x: 400, y: -900 }],
+    mountainRanges: [{ points: [[-900, -100], [500, 600]] }],
+    brushStrokes: [{ type: "water", size: 40, points: [[-100, -100]] }],
+    notes: ""
+  });
+  assert.equal(world.settlements[0].x, -300);
+  assert.equal(world.forests[0].x, -800);
+  assert.equal(world.mountains[0].y, -900);
+  assert.equal(world.brushStrokes[0].points[0][0], -100);
+});
+
+test("export bounds contain authored content independent of viewport travel", () => {
+  const world = validateWorld({
+    formatVersion: 2,
+    canvas: { width: 1200, height: 800 },
+    bounds: { left: -500, top: -400, right: 600, bottom: 700 },
+    initialView: { x: -10000, y: -10000, width: 2000, height: 2000 },
+    terrain: [{ type: "land", points: [[-500, -400], [600, 700]] }],
+    settlements: [],
+    roads: [],
+    rivers: [],
+    forests: [],
+    mountains: [],
+    mountainRanges: [],
+    brushStrokes: [],
+    notes: ""
+  });
+  assert.deepEqual(exportWorldBounds(world, 80), { x: -580, y: -480, width: 1260, height: 1260 });
+});
+
+test("rejects malformed authored bounds", () => {
+  const world = validWorld();
+  world.bounds = { left: 0, top: 0, right: 100, bottom: "bad" };
+  assert.throws(() => validateWorld(world), /bounds\.bottom/);
 });

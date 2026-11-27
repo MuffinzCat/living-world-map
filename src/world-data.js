@@ -1,4 +1,7 @@
-export const CURRENT_FORMAT_VERSION = 1;
+export const CURRENT_FORMAT_VERSION = 2;
+
+export const DEFAULT_INITIAL_VIEW = Object.freeze({ x: -600, y: -400, width: 1200, height: 800 });
+export const DEFAULT_SVG_PADDING = 80;
 
 const COLLECTIONS = [
   "terrain",
@@ -30,6 +33,8 @@ function emptyWorld(source = {}) {
   return {
     formatVersion: CURRENT_FORMAT_VERSION,
     canvas: clone(source.canvas ?? { width: 1200, height: 800 }),
+    bounds: clone(source.bounds ?? null),
+    initialView: clone(source.initialView ?? DEFAULT_INITIAL_VIEW),
     terrain: [],
     settlements: clone(source.settlements ?? []),
     roads: clone(source.roads ?? []),
@@ -74,6 +79,60 @@ function migrateObjectIds(world) {
     const points = Array.isArray(road.points) ? clone(road.points) : [];
     return { ...road, id, points };
   });
+}
+
+function includePoint(bounds, point) {
+  if (!Array.isArray(point) || point.length !== 2) return bounds;
+  const [x, y] = point;
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return bounds;
+  if (!bounds) return { left: x, top: y, right: x, bottom: y };
+  return {
+    left: Math.min(bounds.left, x),
+    top: Math.min(bounds.top, y),
+    right: Math.max(bounds.right, x),
+    bottom: Math.max(bounds.bottom, y)
+  };
+}
+
+export function calculateAuthoredBounds(world) {
+  let bounds = null;
+  for (const item of world.settlements ?? []) bounds = includePoint(bounds, [item?.x, item?.y]);
+  for (const item of world.forests ?? []) bounds = includePoint(bounds, [item?.x, item?.y]);
+  for (const item of world.mountains ?? []) bounds = includePoint(bounds, [item?.x, item?.y]);
+  for (const collection of ["terrain", "rivers", "mountainRanges", "brushStrokes"]) {
+    for (const item of world[collection] ?? []) {
+      for (const point of item?.points ?? []) bounds = includePoint(bounds, point);
+    }
+  }
+  for (const road of world.roads ?? []) {
+    for (const point of road?.points ?? []) bounds = includePoint(bounds, point);
+  }
+  return bounds;
+}
+
+export function expandAuthoredBounds(world) {
+  const calculated = calculateAuthoredBounds(world);
+  if (!calculated) return world.bounds ?? null;
+  const existing = world.bounds;
+  if (!existing) return calculated;
+  return {
+    left: Math.min(existing.left, calculated.left),
+    top: Math.min(existing.top, calculated.top),
+    right: Math.max(existing.right, calculated.right),
+    bottom: Math.max(existing.bottom, calculated.bottom)
+  };
+}
+
+export function exportWorldBounds(world, padding = DEFAULT_SVG_PADDING) {
+  const safePadding = Number.isFinite(padding) && padding >= 0 ? padding : DEFAULT_SVG_PADDING;
+  const bounds = world.bounds ?? calculateAuthoredBounds(world);
+  if (!bounds) return { x: DEFAULT_INITIAL_VIEW.x, y: DEFAULT_INITIAL_VIEW.y, width: DEFAULT_INITIAL_VIEW.width, height: DEFAULT_INITIAL_VIEW.height };
+  return {
+    x: bounds.left - safePadding,
+    y: bounds.top - safePadding,
+    width: Math.max(1, bounds.right - bounds.left + safePadding * 2),
+    height: Math.max(1, bounds.bottom - bounds.top + safePadding * 2)
+  };
 }
 
 function migrateTerrainEntry(entry, world) {
@@ -121,7 +180,7 @@ function migrateTerrainEntry(entry, world) {
 
 export function migrateWorld(input) {
   if (!isRecord(input)) throw new TypeError("World data must be an object.");
-  if (input.formatVersion !== undefined && input.formatVersion !== CURRENT_FORMAT_VERSION) {
+  if (input.formatVersion !== undefined && ![1, 2].includes(input.formatVersion)) {
     throw new Error(`Unsupported world format version: ${input.formatVersion}`);
   }
 
@@ -130,6 +189,21 @@ export function migrateWorld(input) {
   migrateObjectIds(world);
   world.mountainRanges = world.mountainRanges.map(item => ({ ...item, type: undefined })).map(({ type, ...item }) => item);
   world.brushStrokes = world.brushStrokes.map(stroke => ({ ...stroke, type: canonicalType(stroke?.type) }));
+
+  if (input.formatVersion === undefined || input.formatVersion === 1) {
+    const canvas = input.canvas;
+    if (isRecord(canvas) && Number.isFinite(canvas.width) && Number.isFinite(canvas.height) && canvas.width > 0 && canvas.height > 0) {
+      world.bounds = { left: 0, top: 0, right: canvas.width, bottom: canvas.height };
+      world.initialView = { x: 0, y: 0, width: canvas.width, height: canvas.height };
+    } else {
+      world.bounds = calculateAuthoredBounds(world);
+      world.initialView = clone(DEFAULT_INITIAL_VIEW);
+    }
+  } else {
+    world.bounds = isRecord(input.bounds) ? clone(input.bounds) : calculateAuthoredBounds(world);
+    world.initialView = isRecord(input.initialView) ? clone(input.initialView) : clone(DEFAULT_INITIAL_VIEW);
+  }
+  world.bounds = expandAuthoredBounds(world);
   return world;
 }
 
@@ -166,12 +240,30 @@ function validatePosition(item, path) {
   requireFinite(item.y, `${path}.y`);
 }
 
+function validateBounds(bounds, path) {
+  if (bounds === null) return;
+  requireRecord(bounds, path);
+  for (const key of ["left", "top", "right", "bottom"]) requireFinite(bounds[key], `${path}.${key}`);
+  if (bounds.right < bounds.left) throw new Error(`${path}.right must be greater than or equal to ${path}.left.`);
+  if (bounds.bottom < bounds.top) throw new Error(`${path}.bottom must be greater than or equal to ${path}.top.`);
+}
+
+function validateView(view, path) {
+  requireRecord(view, path);
+  requireFinite(view.x, `${path}.x`);
+  requireFinite(view.y, `${path}.y`);
+  requireFinite(view.width, `${path}.width`, { positive: true });
+  requireFinite(view.height, `${path}.height`, { positive: true });
+}
+
 export function validateWorld(input) {
   const world = migrateWorld(input);
   requireRecord(world.canvas, "canvas");
   requireFinite(world.canvas.width, "canvas.width", { positive: true });
   requireFinite(world.canvas.height, "canvas.height", { positive: true });
   requireString(world.notes, "notes");
+  validateBounds(world.bounds, "bounds");
+  validateView(world.initialView, "initialView");
 
   for (const key of COLLECTIONS) {
     if (!Array.isArray(world[key])) throw new Error(`${key} must be an array.`);

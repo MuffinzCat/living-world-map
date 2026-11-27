@@ -15,7 +15,7 @@ const contentTypes = {
 };
 
 function fileForRequest(requestUrl = "/") {
-  const pathname = decodeURIComponent(new URL(requestUrl, "http://<scrubbed-url-domain>").pathname);
+  const pathname = decodeURIComponent(new URL(requestUrl, "http://127.0.0.1").pathname);
   const relativePath = pathname === "/" ? "index.html" : pathname.replace(/^\/+/, "");
   const filePath = resolve(root, normalize(relativePath));
 
@@ -40,6 +40,6 @@ const server = createServer((request, response) => {
 });
 
 server.listen(port, "127.0.0.1", () => {
-  console.log(`Living World Map preview: <scrubbed-url-domain>);
+  console.log(`Living World Map preview: http://127.0.0.1:${port}/`);
   console.log("Press Ctrl+C to stop.");
 });
