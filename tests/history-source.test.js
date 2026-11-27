@@ -25,11 +25,14 @@ test("history records editor gestures and JSON replacement", async () => {
   assert.match(source, /#load/);
 });
 
-test("undo and redo preserve the current map viewport", async () => {
-  const source = await read("src/history-controls.js");
-  assert.match(source, /const viewBox = map\.getAttribute\("viewBox"\)/);
-  assert.match(source, /map\.setAttribute\("viewBox", viewBox\)/);
-  assert.match(source, /history-view-restored/);
+test("undo and redo restore world data without resetting the viewport", async () => {
+  const historyControls = await read("src/history-controls.js");
+  const main = await read("src/main.js");
+
+  assert.match(historyControls, /new CustomEvent\("history-restore"/);
+  assert.match(main, /addEventListener\("history-restore"/);
+  assert.match(main, /applyJSON\(false\)/);
+  assert.doesNotMatch(historyControls, /applyButton\.click\(\)/);
 });
 
 test("history supports standard shortcuts and persistent limits", async () => {
