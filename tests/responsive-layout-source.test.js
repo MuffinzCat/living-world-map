@@ -46,18 +46,22 @@ test("all current and future toolbar flyouts share one container and stylesheet"
   assert.equal(cssDeclarations(css, ".tool-options-toolbar").get("min-height"), "var(--toolbar-flyout-min-height)");
 });
 
-test("all tool triggers target the one toolbar container", async () => {
+test("shared toolbar visibility and animation use separate rules", async () => {
+  const app = await read("styles/app.css");
+  const flyout = await read("styles/toolbar-flyout.css");
+  assert.equal(cssDeclarations(app, ".tool-options-toolbar:not([hidden])").get("display"), "flex");
+  assert.equal(cssDeclarations(app, ".tool-options-toolbar:not([hidden])").has("animation"), false);
+  assert.match(cssDeclarations(flyout, ".tool-options-toolbar.animate-open").get("animation"), /reveal-tool-options/);
+});
+
+test("all tool triggers target and directly open the one toolbar container", async () => {
   const html = await read("index.html");
+  const source = await read("src/tool-options.js");
   for (const id of ["add-settlement", "add-mountain", "brush-mode"]) {
     const button = html.match(new RegExp(`<button[^>]*id="${id}"[^>]*>`))?.[0] ?? "";
     assert.match(button, /aria-controls="tool-options-toolbar"/);
   }
-});
-
-test("shared toolbar is shown directly by every menu trigger", async () => {
-  const source = await read("src/tool-options.js");
   assert.match(source, /closest\("#brush-mode, button\[data-placement\]"\)/);
   assert.match(source, /showToolOptions\(trigger\.id === "brush-mode" \? brushContent : placementContent\)/);
-  assert.match(source, /contents\.forEach\(item => \{ item\.hidden = item !== content; \}\)/);
   assert.match(source, /toolbar\.hidden = false/);
 });
