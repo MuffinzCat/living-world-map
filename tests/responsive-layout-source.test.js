@@ -55,3 +55,11 @@ test("tool menus stay outside the main toolbar so they resize the map view", asy
   assert.ok(html.indexOf("id=\"brush-controls\"") < html.indexOf("class=\"map-frame\""));
   assert.ok(html.indexOf("id=\"placement-controls\"") < html.indexOf("class=\"map-frame\""));
 });
+
+test("brush toolbar follows the active brush mode", async () => {
+  const source = await read("src/brush-controls.js");
+  assert.match(source, /aria-pressed/);
+  assert.match(source, /MutationObserver\(syncBrushToolbar\)/);
+  assert.match(source, /brushControls\.hidden = !open/);
+  assert.doesNotMatch(source, /button === brushButton/);
+});
