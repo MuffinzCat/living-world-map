@@ -21,14 +21,15 @@ button { cursor: pointer; }
 button:hover { background: #ead9b5; }
 button[aria-pressed="true"] { color: #fff8e7; background: #604936; }
 button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible, dialog:focus-visible { outline: 2px solid #956329; outline-offset: 2px; }
-.toolbar label, .toolbar output, #chosen-position { font-size: .9rem; }
+.toolbar label, .toolbar output, #placement-status { font-size: .9rem; }
+#placement-status { min-width: 12rem; }
 #settlement-name { width: 10rem; }
 #brush-size { width: min(12rem, 35vw); }
 #brush-size-value { min-width: 2.5rem; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
 .map-frame { width: 100%; min-height: 0; flex: 1 1 auto; overflow: hidden; border: 1px solid var(--panel-border); border-top: 0; background: var(--map-surround); }
 #map { display: block; width: 100%; height: 100%; user-select: none; touch-action: none; }
 #map[data-mode="pan"] { cursor: grab; }
-#map[data-mode="choose"], #map[data-mode="brush"] { cursor: crosshair; }
+#map[data-mode="placement"] { cursor: crosshair; }
 #map[data-mode="brush"] { cursor: none; }
 #map[data-mode="select"] .settlement { cursor: grab; }
 .brush-outline { fill: none; stroke: #2f251c; stroke-width: 2; stroke-dasharray: 6 4; vector-effect: non-scaling-stroke; pointer-events: none; }
