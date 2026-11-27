@@ -20,13 +20,15 @@ test("settlement flyout has concise title, name, type, and cancel controls", asy
   assert.match(html, /class="placement-action-row">\s*<button id="cancel-placement"/);
 });
 
-test("settlement name and type are explicitly assigned separate rows", async () => {
+test("settlement name and type use separate field rows", async () => {
+  const html = await read("index.html");
+  const fields = html.match(/id="settlement-fields"[\s\S]*?<\/span>/)?.[0] ?? "";
+  assert.equal((fields.match(/class="placement-field-row"/g) ?? []).length, 2);
+  assert.match(fields, /class="placement-field-row"><label for="settlement-name">Name<\/label><input id="settlement-name"/);
+  assert.match(fields, /class="placement-field-row"><label for="settlement-type">Type<\/label><select id="settlement-type"/);
   const css = await read("styles/placement-flyout.css");
-  assert.match(css, /#settlement-fields \{[^}]*display: grid;[^}]*grid-template-columns: auto minmax\(0, 1fr\);/s);
-  assert.match(css, /label\[for="settlement-name"\] \{[^}]*grid-column: 1;[^}]*grid-row: 1;/s);
-  assert.match(css, /#settlement-name \{[^}]*grid-column: 2;[^}]*grid-row: 1;/s);
-  assert.match(css, /label\[for="settlement-type"\] \{[^}]*grid-column: 1;[^}]*grid-row: 2;/s);
-  assert.match(css, /#settlement-type \{[^}]*grid-column: 2;[^}]*grid-row: 2;/s);
+  assert.match(css, /#settlement-fields \{[^}]*display: flex;[^}]*flex-direction: column;/s);
+  assert.match(css, /\.placement-field-row \{[^}]*display: grid;[^}]*grid-template-columns: auto minmax\(0, 1fr\);/s);
 });
 
 test("settlement controls stay within the flyout instead of overflowing", async () => {
@@ -34,6 +36,7 @@ test("settlement controls stay within the flyout instead of overflowing", async 
   assert.match(css, /\.placement-flyout \{[^}]*flex-direction: column;[^}]*align-items: stretch;[^}]*width: fit-content;[^}]*max-width:/s);
   assert.match(css, /\.placement-content-row \{[^}]*display: flex;[^}]*flex-wrap: wrap;[^}]*min-width: 0;/s);
   assert.match(css, /#settlement-fields \{[^}]*min-width: 0;/s);
+  assert.match(css, /\.placement-field-row \{[^}]*min-width: 0;/s);
 });
 
 test("cancel placement stays visibly contained in a dedicated action row", async () => {
