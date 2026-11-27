@@ -11,7 +11,7 @@ test("selection controls are loaded in the shared tool-options toolbar", async (
   assert.match(page, /styles\/selection\.css/);
   assert.match(page, /src\/selection-controls\.js/);
   assert.match(source, /optionsToolbar\.append\(controls\)/);
-  assert.match(source, /showToolOptions\(selectionControls\)/);
+  assert.match(source, /showToolOptions\(controls\)/);
   assert.match(source, /id="duplicate-selection"/);
   assert.match(source, /id="delete-selection"/);
   assert.match(source, /id="clear-selection"/);
