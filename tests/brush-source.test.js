@@ -36,33 +36,32 @@ test("a brush gesture is committed only when it finishes", () => {
   assert.match(finishGesture, /world\.brushStrokes\.push\(completed\.stroke\)/);
 });
 
-test("live strokes use the canonical renderer and matching layer order", () => {
+test("live strokes use the canonical renderer", () => {
   assert.match(previewSource, /renderBrushStroke\(layer, stroke/);
   assert.match(rendererSource, /export function renderBrushStroke/);
-  assert.match(source, /stroke\.type === "mountainRange" \? "\.mountain-layer" : "\.terrain-layer"/);
-  assert.match(source, /target\.after\(liveLayer\)/);
 });
 
-test("brush colours use the same fill palette as map terrain", () => {
+test("brush colours use solid opaque SVG shapes", () => {
   const brushRenderer = rendererSource.slice(
     rendererSource.indexOf("export function renderBrushStroke"),
     rendererSource.indexOf("function drawNotes")
   );
   assert.match(rendererSource, /water: "#355b57"/);
   assert.match(brushRenderer, /stroke\.type === "mountainRange" \? palette\.mountain : palette\[stroke\.type\]/);
-  assert.match(brushRenderer, /append\(parent, "rect"/);
-  assert.match(brushRenderer, /fill: colour/);
-  assert.match(brushRenderer, /mask: `url\(#\$\{maskId\}\)`/);
+  assert.match(brushRenderer, /append\(parent, "circle"/);
+  assert.match(brushRenderer, /append\(parent, "path"/);
+  assert.match(brushRenderer, /stroke: colour/);
+  assert.doesNotMatch(brushRenderer, /mask|opacity/);
 });
 
-test("mountain brush paints a continuous masked path instead of symbols", () => {
+test("brush paths use the selected width and rounded edges", () => {
   const brushRenderer = rendererSource.slice(
     rendererSource.indexOf("export function renderBrushStroke"),
     rendererSource.indexOf("function drawNotes")
   );
-  assert.match(brushRenderer, /append\(mask, "path"/);
-  assert.doesNotMatch(brushRenderer, /drawMountainRange/);
   assert.match(brushRenderer, /"stroke-width": stroke\.size/);
+  assert.match(brushRenderer, /"stroke-linecap": "round"/);
+  assert.match(brushRenderer, /r: stroke\.size \/ 2/);
 });
 
 test("brush outline uses half the selected stroke width as its radius", () => {
