@@ -1,3 +1,4 @@
+import "./history-controls.js";
 import { hideToolOptions, isToolOptionsVisible, showToolOptions } from "./tool-options.js";
 
 const brushButton = document.querySelector("#brush-mode");
