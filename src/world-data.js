@@ -189,6 +189,14 @@ export function migrateWorld(input) {
   migrateObjectIds(world);
   world.mountainRanges = world.mountainRanges.map(item => ({ ...item, type: undefined })).map(({ type, ...item }) => item);
   world.brushStrokes = world.brushStrokes.map(stroke => ({ ...stroke, type: canonicalType(stroke?.type) }));
+  const strokeIds = new Set();
+  world.brushStrokes = world.brushStrokes.map((stroke, index) => {
+    let id = typeof stroke.id === "string" && stroke.id.trim() ? stroke.id : `stroke-${index + 1}`;
+    let suffix = 2;
+    while (strokeIds.has(id)) id = `stroke-${index + 1}-${suffix++}`;
+    strokeIds.add(id);
+    return { ...stroke, id };
+  });
 
   if (input.formatVersion === undefined || input.formatVersion === 1) {
     const canvas = input.canvas;
@@ -320,6 +328,13 @@ export function validateWorld(input) {
       requireString(item.id, `${path}.id`, { allowEmpty: false });
       if (ids.has(item.id)) throw new Error(`${path}.id must be unique.`);
       ids.add(item.id);
+      if (item.size !== undefined) requireFinite(item.size, `${path}.size`, { positive: true });
+      if (item.seed !== undefined) {
+        requireFinite(item.seed, `${path}.seed`);
+        if (!Number.isInteger(item.seed) || item.seed < 0) throw new Error(`${path}.seed must be a non-negative integer.`);
+      }
+      if (item.sourceId !== undefined) requireString(item.sourceId, `${path}.sourceId`, { allowEmpty: false });
+      if (item.suppressed !== undefined && typeof item.suppressed !== "boolean") throw new Error(`${path}.suppressed must be a boolean.`);
     });
   }
   world.mountainRanges.forEach((item, index) => {
@@ -331,10 +346,19 @@ export function validateWorld(input) {
   world.brushStrokes.forEach((item, index) => {
     const path = `brushStrokes[${index}]`;
     requireRecord(item, path);
+    requireString(item.id, `${path}.id`, { allowEmpty: false });
     if (!BRUSH_TYPES.has(item.type)) throw new Error(`${path}.type is not supported.`);
     requireFinite(item.size, `${path}.size`, { positive: true });
     validatePoints(item.points, `${path}.points`);
   });
+  const sourceIds = new Set(world.brushStrokes.map(stroke => stroke.id));
+  for (const collection of ["mountains", "forests"]) {
+    world[collection].forEach((item, index) => {
+      if (item.sourceId && !sourceIds.has(item.sourceId)) {
+        throw new Error(`${collection}[${index}].sourceId must reference an existing brush stroke.`);
+      }
+    });
+  }
 
   return world;
 }
