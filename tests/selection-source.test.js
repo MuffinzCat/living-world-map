@@ -44,3 +44,14 @@ test("selection supports keyboard actions and stays out of SVG exports", async (
   assert.match(source, /#export-svg/);
   assert.match(source, /remove\("is-selected"\)/);
 });
+
+test("selection includes settlement editing, forest movement, road creation, and bend editing", async () => {
+  const source = await read("src/selection-controls.js");
+  assert.match(source, /selected-settlement-name/);
+  assert.match(source, /SETTLEMENT_TYPES/);
+  assert.match(source, /forest-object/);
+  assert.match(source, /road-from/);
+  assert.match(source, /road-to/);
+  assert.match(source, /add-road-point/);
+  assert.match(source, /road-bend-handle/);
+});
