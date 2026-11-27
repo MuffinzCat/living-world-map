@@ -4,7 +4,9 @@ import {
   commitMountainStroke,
   generateMountainSymbols,
   pointWithinBrush,
-  removeUnsupportedMountedSymbols
+  previewMountainLayout,
+  removeUnsupportedMountedSymbols,
+  removeMountainBrushStroke
 } from "../src/terrain-generation.js";
 
 function emptyWorld() {
@@ -38,4 +40,21 @@ test("replacement strokes suppress only attached symbols beneath the replacement
   removeUnsupportedMountedSymbols(world, { type: "water", size: 300, points: [[50, 0]] });
   assert.ok(world.mountains.find(item => item.id === "manual-mountain").suppressed !== true);
   assert.ok(world.mountains.filter(item => item.sourceId).every(item => item.suppressed));
+});
+
+test("live preview layout exactly matches committed generated layout", () => {
+  const world = emptyWorld();
+  const stroke = { id: "stroke-exact", type: "mountainRange", size: 44, points: [[-120, 80], [40, 20], [180, 90]] };
+  const preview = previewMountainLayout(world, stroke);
+  commitMountainStroke(world, stroke);
+  assert.deepEqual(world.mountains, preview);
+});
+
+test("source brush removal deletes only attached symbols", () => {
+  const world = emptyWorld();
+  commitMountainStroke(world, { id: "source-a", type: "mountainRange", size: 40, points: [[0, 0], [100, 0]] });
+  world.mountains.push({ id: "manual-mountain", x: 25, y: 25, size: 32 });
+  removeMountainBrushStroke(world, "source-a");
+  assert.equal(world.brushStrokes.length, 0);
+  assert.deepEqual(world.mountains, [{ id: "manual-mountain", x: 25, y: 25, size: 32 }]);
 });
