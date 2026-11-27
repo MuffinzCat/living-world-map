@@ -9,12 +9,12 @@ test("editor places icon history controls before zoom controls", async () => {
   const controls = await read("src/history-controls.js");
   const brush = await read("src/brush-controls.js");
   assert.match(brush, /import "\.\/history-controls\.js"/);
-  assert.match(controls, /document\.querySelector\("#undo-brush"\)\.remove\(\)/);
+  assert.match(controls, /document\.querySelector\("#undo-brush"\)\?\.remove\(\)/);
   assert.match(controls, /zoomIn\.insertAdjacentHTML\("beforebegin"/);
   assert.match(controls, /id="undo" class="icon-button"/);
   assert.match(controls, /id="redo" class="icon-button"/);
   assert.match(controls, /id="history-limit"/);
-  assert.match(controls, /<svg class="mode-icon"/);
+  assert.match(controls, /<svg class="mode-icon history-icon"/);
 });
 
 test("history records editor gestures and JSON replacement", async () => {
