@@ -42,9 +42,9 @@ test("tool menus share the same full-width sliding toolbar flow", async () => {
   assert.equal(shared.get("position"), "relative");
   assert.equal(shared.get("width"), "100%");
   assert.equal(shared.get("border-top"), "0");
-  assert.match(shared.get("animation"), /reveal-tool-options/);
   assert.match(html, /id="brush-controls" class="tool-options-toolbar brush-flyout"/);
   assert.match(html, /id="placement-controls" class="tool-options-toolbar placement-flyout"/);
+  assert.match(css, /reveal-tool-options/);
   assert.match(css, /prefers-reduced-motion: reduce/);
 });
 
@@ -56,10 +56,13 @@ test("tool menus stay outside the main toolbar so they resize the map view", asy
   assert.ok(html.indexOf("id=\"placement-controls\"") < html.indexOf("class=\"map-frame\""));
 });
 
-test("brush toolbar follows the active brush mode", async () => {
-  const source = await read("src/brush-controls.js");
-  assert.match(source, /aria-pressed/);
-  assert.match(source, /MutationObserver\(syncBrushToolbar\)/);
-  assert.match(source, /brushControls\.hidden = !open/);
-  assert.doesNotMatch(source, /button === brushButton/);
+test("tool menu switching reuses the visible toolbar space without replaying animation", async () => {
+  const shared = await read("src/tool-options.js");
+  const brush = await read("src/brush-controls.js");
+  const placement = await read("src/placement-controls.js");
+  assert.match(shared, /visibleToolbar && visibleToolbar !== target/);
+  assert.match(shared, /toolbar\.style\.animation = "none"/);
+  assert.match(shared, /hideOtherToolbars\(toolbar\)/);
+  assert.match(brush, /showToolOptions\(brushControls\)/);
+  assert.match(placement, /showToolOptions\(placementFlyout\)/);
 });
