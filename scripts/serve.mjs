@@ -40,6 +40,6 @@ const server = createServer((request, response) => {
 });
 
 server.listen(port, "127.0.0.1", () => {
-  console.log(`Living World Map preview: <scrubbed-url-domain>);
+  console.log(`Living World Map preview: http://127.0.0.1:${port}/`);
   console.log("Press Ctrl+C to stop.");
 });
