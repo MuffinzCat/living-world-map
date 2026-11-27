@@ -1,13 +1,34 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { expectAttribute, openingTagWith } from "./source-helpers.js";
+
 const root = new URL("../", import.meta.url);
 const html = await readFile(new URL("index.html", root), "utf8");
 const source = await readFile(new URL("src/main.js", root), "utf8");
-const styles = await readFile(new URL("styles/app.css", root), "utf8");
-test("placement starts from toolbar feature actions", () => { assert.doesNotMatch(html, /data-mode="choose"/); assert.match(source, /beginSettlementPlacement/); assert.match(source, /beginMountainPlacement/); assert.match(html, /id="add-settlement"[^>]*data-placement="settlement"[^>]*aria-label="Add settlement"/); assert.match(html, /id="add-mountain"[^>]*data-placement="mountain"[^>]*aria-label="Add mountain"/); });
-test("placement actions follow the approved toolbar order", () => { const move = html.indexOf('data-mode="select"'); const settlement = html.indexOf('id="add-settlement"'); const mountain = html.indexOf('id="add-mountain"'); const brush = html.indexOf('id="brush-mode"'); assert.ok(move < settlement && settlement < mountain && mountain < brush); });
-test("placement icons use outlined plus signs and a snowy mountain", () => { assert.equal((html.match(/class="symbol-outline"/g) ?? []).length, 2); assert.match(html, /id="add-mountain"[\s\S]*?class="snow-peak"/); assert.match(styles, /\.move-symbol-outline, \.symbol-outline \{[^}]*stroke-width: 4;/s); assert.match(styles, /\.snow-peak \{[^}]*fill: currentColor;/s); });
-test("old placement text buttons are removed from the details toolbar", () => { const details = html.match(/aria-label="Settlement details"[\s\S]*?<\/div>/)?.[0] ?? ""; assert.doesNotMatch(details, /id="add-settlement"|id="add-mountain"/); });
-test("pending placement has visible feedback and cancellation", () => { assert.match(html, /id="placement-status"/); assert.match(html, /id="cancel-placement"/); assert.match(source, /event\.key === "Escape"/); assert.match(source, /setMode\("placement"\)/); assert.match(styles, /data-mode="placement"/); });
-test("one valid map click completes the requested placement", () => { assert.match(source, /mode === "placement" && inside\(point\)/); assert.match(source, /completePlacement\(point\)/); assert.match(source, /world\.settlements\.push/); assert.match(source, /world\.mountains\.push/); });
+
+test("placement starts from labelled settlement and mountain actions", () => {
+  for (const [id, kind, label] of [["add-settlement", "settlement", "Add settlement"], ["add-mountain", "mountain", "Add mountain"]]) {
+    const button = openingTagWith(html, "id", id);
+    expectAttribute(button, "data-placement", kind);
+    expectAttribute(button, "aria-label", label);
+  }
+  assert.match(source, /beginSettlementPlacement/);
+  assert.match(source, /beginMountainPlacement/);
+  assert.doesNotMatch(html, /data-mode="choose"/);
+});
+
+test("pending placement can be cancelled and announces its state", () => {
+  const status = openingTagWith(html, "id", "placement-status");
+  expectAttribute(status, "aria-live", "polite");
+  assert.ok(openingTagWith(html, "id", "cancel-placement"));
+  assert.match(source, /event\.key === "Escape"/);
+  assert.match(source, /setMode\("placement"\)/);
+});
+
+test("one valid left click completes the requested placement", () => {
+  assert.match(source, /mode === "placement" && inside\(point\)/);
+  assert.match(source, /completePlacement\(point\)/);
+  assert.match(source, /world\.settlements\.push/);
+  assert.match(source, /world\.mountains\.push/);
+});

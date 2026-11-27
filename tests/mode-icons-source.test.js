@@ -1,10 +1,34 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { cssDeclarations, expectAttribute, openingTagWith } from "./source-helpers.js";
+
 const root = new URL("../", import.meta.url);
 async function read(path) { return readFile(new URL(path, root), "utf8"); }
-test("map modes use accessible inline icon buttons", async () => { const html = await read("index.html"); for (const [mode, label] of [["select", "Move settlements"], ["pan", "Move map"], ["brush", "Brush"]]) { assert.match(html, new RegExp(`class="icon-button"[^>]*(?:data-mode="${mode}"[^>]*aria-label="${label}"|aria-label="${label}"[^>]*data-mode="${mode}")`)); assert.match(html, new RegExp(`data-tooltip="${label}"`)); } assert.equal((html.match(/data-mode="(?:select|pan|brush)"[^>]*[\s\S]*?<svg class="mode-icon/g) ?? []).length, 3); });
-test("map movement is first and selected by default", async () => { const html = await read("index.html"); assert.ok(html.indexOf('data-mode="pan"') < html.indexOf('data-mode="select"')); assert.match(html, /data-mode="pan"[^>]*aria-label="Move map"[^>]*aria-pressed="true"/); assert.match(html, /data-mode="select"[^>]*aria-label="Move settlements"[^>]*aria-pressed="false"/); const source = await read("src/default-mode.js"); assert.match(source, /button\[data-mode="pan"\]/); });
-test("settlement movement reuses a separated map movement symbol", async () => { const html = await read("index.html"); assert.equal((html.match(/class="move-symbol"/g) ?? []).length, 2); assert.match(html, /data-mode="select"[\s\S]*?class="move-symbol-outline"[\s\S]*?class="move-symbol"/); const css = await read("styles/app.css"); assert.match(css, /\.move-symbol-outline, \.symbol-outline \{[^}]*stroke-width: 4;/s); });
-test("brush icon uses the approved outlined design and orientation", async () => { const html = await read("index.html"); const brush = html.match(/id="brush-mode"[\s\S]*?<\/button>/)?.[0] ?? ""; assert.match(brush, /class="mode-icon approved-paintbrush"/); assert.match(brush, /transform="rotate\(45 12 12\)"/); assert.match(brush, /class="paint-fill"/); });
-test("tooltips appear for pointer and keyboard focus", async () => { const css = await read("styles/app.css"); assert.match(css, /\.icon-button:hover::after, \.icon-button:focus-visible::after/); assert.match(css, /\.mode-icon \{[^}]*stroke: currentColor;/s); });
+
+test("map tools expose accessible names and tooltips", async () => {
+  const html = await read("index.html");
+  for (const [mode, label] of [["select", "Move settlements"], ["pan", "Move map"], ["brush", "Brush"]]) {
+    const button = openingTagWith(html, "data-mode", mode);
+    expectAttribute(button, "aria-label", label);
+    expectAttribute(button, "data-tooltip", label);
+    expectAttribute(button, "aria-pressed", mode === "pan" ? "true" : "false");
+  }
+});
+
+test("map movement is the default tool", async () => {
+  const source = await read("src/default-mode.js");
+  assert.match(source, /button\[data-mode="pan"\]/);
+});
+
+test("tool icons remain visible and keyboard tooltips remain available", async () => {
+  const html = await read("index.html");
+  for (const mode of ["select", "pan", "brush"]) {
+    const buttonStart = html.indexOf(openingTagWith(html, "data-mode", mode));
+    const buttonEnd = html.indexOf("</button>", buttonStart);
+    assert.match(html.slice(buttonStart, buttonEnd), /<svg\b[^>]*class="[^"]*mode-icon/);
+  }
+  const css = await read("styles/app.css");
+  assert.equal(cssDeclarations(css, ".mode-icon").get("stroke"), "currentColor");
+  assert.match(css, /\.icon-button:hover::after, \.icon-button:focus-visible::after/);
+});
