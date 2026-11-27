@@ -1,1 +1,1 @@
-This temporary file verifies preview creation, browser access, clickable link comments, updates, and cleanup after GitHub Pages was saved to main/root.
+This temporary file verifies preview creation, browser access, absolute clickable link comments, updates, and cleanup after GitHub Pages was saved to main/root.
