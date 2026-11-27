@@ -34,16 +34,14 @@ test("settlement movement reuses a separated map movement symbol", async () => {
   assert.match(css, /\.move-symbol-outline \{[^}]*vector-effect: non-scaling-stroke;/s);
 });
 
-test("brush icon uses a detached stick and an outlined head with filled paint", async () => {
+test("brush icon uses the approved outlined design and orientation", async () => {
   const html = await read("index.html");
   const brush = html.match(/id="brush-mode"[\s\S]*?<\/button>/)?.[0] ?? "";
-  assert.match(brush, /class="paintbrush-stick"/);
-  assert.match(brush, /class="paintbrush-head"/);
-  assert.match(brush, /class="paint-splotch"/);
-  const css = await read("styles/app.css");
-  assert.match(css, /\.paintbrush-stick \{[^}]*fill: none;[^}]*stroke: currentColor;/s);
-  assert.match(css, /\.paintbrush-head \{[^}]*fill: none;[^}]*stroke: currentColor;/s);
-  assert.match(css, /\.paint-splotch \{[^}]*fill: currentColor;[^}]*stroke: none;/s);
+  assert.match(brush, /class="mode-icon approved-paintbrush"/);
+  assert.match(brush, /transform="rotate\(45 12 12\)"/);
+  assert.match(brush, /stroke-width="1\.7"/);
+  assert.match(brush, /class="paint-fill"/);
+  assert.match(brush, /fill="currentColor" stroke="none"/);
 });
 
 test("icon controls retain mode and pressed-state hooks", async () => {
