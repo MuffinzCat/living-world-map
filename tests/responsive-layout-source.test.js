@@ -50,7 +50,7 @@ test("shared toolbar visibility and animation use separate rules", async () => {
   const app = await read("styles/app.css");
   const flyout = await read("styles/toolbar-flyout.css");
   assert.equal(cssDeclarations(app, ".tool-options-toolbar:not([hidden])").get("display"), "flex");
-  assert.equal(cssDeclarations(app, ".tool-options-toolbar:not([hidden])").has("animation"), false);
+  assert.equal(cssDeclarations(app, ".tool-options-toolbar:not([hidden])").get("animation"), undefined);
   assert.match(cssDeclarations(flyout, ".tool-options-toolbar.animate-open").get("animation"), /reveal-tool-options/);
 });
 
