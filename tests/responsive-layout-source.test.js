@@ -55,13 +55,14 @@ test("tool menus stay outside the main toolbar so they resize the map view", asy
   assert.ok(html.indexOf("id=\"placement-controls\"") < html.indexOf("class=\"map-frame\""));
 });
 
-test("tool menu animation is opt-in only when opening from fully closed", async () => {
+test("cross-toolbar switching survives the old toolbar close callback", async () => {
   const shared = await read("src/tool-options.js");
   const css = await read("styles/toolbar-flyout.css");
-  assert.match(shared, /let visibleToolbar =/);
-  assert.match(shared, /visibleToolbar !== null && visibleToolbar !== toolbar/);
+  assert.match(shared, /let pendingSwitchTarget = null/);
+  assert.match(shared, /pendingSwitchTarget === toolbar/);
+  assert.match(shared, /pendingSwitchTarget = target/);
+  assert.match(shared, /pendingSwitchTarget === null\) visibleToolbar = null/);
   assert.match(shared, /classList\.toggle\("animate-open", !switching && toolbar\.hidden\)/);
-  assert.match(shared, /if \(visibleToolbar === toolbar\) visibleToolbar = null/);
   assert.match(cssDeclarations(css, ".tool-options-toolbar").get("animation"), /^none/);
   assert.match(cssDeclarations(css, ".tool-options-toolbar.animate-open").get("animation"), /reveal-tool-options/);
 });
