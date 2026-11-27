@@ -1,9 +1,10 @@
-import { renderBrushPreview } from "./brush-preview.js";
+import { renderBrushPreview, renderRiverPreview } from "./brush-preview.js";
 import { renderWorld } from "./map-renderer.js";
 import { fitAuthoredMap, panView, zoomView } from "./view-maths.js";
 import { exportWorldBounds, loadWorld, serialiseWorld, validateWorld } from "./world-data.js";
 import { commitMountainStroke, removeUnsupportedMountedSymbols, removeMountainBrushStroke, uniqueStrokeId } from "./terrain-generation.js";
 import { commitForestStroke, removeUnsupportedForestSymbols, removeForestBrushStroke } from "./forest-generation.js";
+import { addRiver } from "./editor-actions.js";
 
 const storageKey = "living-world-map";
 const map = document.querySelector("#map");
@@ -16,7 +17,7 @@ const settlementName = document.querySelector("#settlement-name");
 const settlementType = document.querySelector("#settlement-type");
 const placementStatus = document.querySelector("#placement-status");
 const cancelPlacementButton = document.querySelector("#cancel-placement");
-const modeHelp = { select: "Move settlements: drag a settlement; connected roads follow.", pan: "Move map: drag empty map space. Use the wheel or buttons to zoom.", brush: "Brush: drag to paint. The outline shows the selected size." };
+const modeHelp = { select: "Move settlements: drag a settlement; connected roads follow.", pan: "Move map: drag empty map space. Use the wheel or buttons to zoom.", brush: "Brush: drag to paint. The outline shows the selected size.", river: "River: drag to draw a continuous river path." };
 let world;
 let view;
 let mode = "select";
@@ -51,7 +52,7 @@ function updatePlacementUI() { const kind = pendingPlacement?.kind; placementSta
 function setMode(next, trigger = null) {
   if (next !== "placement" && pendingPlacement) { pendingPlacement = null; updatePlacementUI(); }
   mode = next;
-  if (next !== "brush") gesture = null;
+  if (next !== "brush" && next !== "river") gesture = null;
   map.dataset.mode = mode;
   document.querySelectorAll("button[data-mode]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.mode === mode)));
   if (mode !== "brush") brushOutline?.setAttribute("visibility", "hidden");
@@ -60,6 +61,7 @@ function setMode(next, trigger = null) {
     pan: document.querySelector('[data-mode="pan"]'),
     select: document.querySelector('[data-mode="select"]'),
     brush: document.querySelector("#brush-mode"),
+    river: document.querySelector("#river-mode"),
   };
   document.dispatchEvent(new CustomEvent("tool-change", { detail: { tool: next, trigger: trigger ?? toolTriggers[next] ?? null } }));
 }
@@ -94,6 +96,7 @@ map.addEventListener("pointerdown", event => {
     if (mode === "placement" && inside(point)) { completePlacement(point); event.preventDefault(); return; }
     if (mode === "select" && settlementNode) { const settlement = world.settlements.find(item => item.id === settlementNode.dataset.id); gesture = { kind: "settlement", pointerId: event.pointerId, node: settlementNode, settlement, offset: [point[0] - settlement.x, point[1] - settlement.y] }; }
     else if (mode === "pan" && !settlementNode) startPan(event);
+    else if (mode === "river" && inside(point)) { gesture = { kind: "river", pointerId: event.pointerId, points: [point] }; placeLiveBrushLayer(); renderRiverPreview(liveLayer, gesture.points); }
     else if (mode === "brush" && inside(point)) { const stroke = { id: uniqueStrokeId(world), type: brushType.value, size: Number(brushSize.value), points: [point] }; gesture = { kind: "brush", pointerId: event.pointerId, stroke }; placeLiveBrushLayer(); renderBrushPreview(liveLayer, stroke, world); }
     else return;
   }
@@ -101,8 +104,8 @@ map.addEventListener("pointerdown", event => {
   event.preventDefault();
 });
 map.addEventListener("auxclick", event => { if (event.button === 1) event.preventDefault(); });
-map.addEventListener("pointermove", event => { const point = mapPoint(event); updateOutline(point); if (!gesture || event.pointerId !== gesture.pointerId) return; if (gesture.kind === "pan") { const rect = map.getBoundingClientRect(); view = panView(gesture.startView, gesture.startClient, { x: event.clientX, y: event.clientY }, { width: rect.width, height: rect.height }); applyView(); } else if (gesture.kind === "settlement") { const [offsetX, offsetY] = gesture.offset; gesture.settlement.x = Math.round((point[0] - offsetX) * 10) / 10; gesture.settlement.y = Math.round((point[1] - offsetY) * 10) / 10; gesture.node.setAttribute("transform", `translate(${gesture.settlement.x} ${gesture.settlement.y})`); updateRoads(gesture.settlement); } else if (gesture.kind === "brush" && inside(point)) { const last = gesture.stroke.points.at(-1); if (Math.hypot(point[0] - last[0], point[1] - last[1]) >= 2) { gesture.stroke.points.push(point); renderBrushPreview(liveLayer, gesture.stroke, world); } } });
-function finishGesture(event) { if (!gesture || event.pointerId !== gesture.pointerId) return; const completed = gesture; gesture = null; if (completed.kind === "brush") { if (completed.stroke.type === "mountainRange") commitMountainStroke(world, completed.stroke); else if (completed.stroke.type === "forest") commitForestStroke(world, completed.stroke); else { world.brushStrokes.push(completed.stroke); removeUnsupportedMountedSymbols(world, completed.stroke); removeUnsupportedForestSymbols(world, completed.stroke); } } if (completed.kind !== "pan") { syncJSON(); refreshMap(); } setStatus(`${completed.kind === "brush" ? "Brush stroke added." : completed.kind === "settlement" ? "Settlement moved." : "Map moved."} ${modeHelp[mode] ?? ""}`.trim()); }
+map.addEventListener("pointermove", event => { const point = mapPoint(event); updateOutline(point); if (!gesture || event.pointerId !== gesture.pointerId) return; if (gesture.kind === "pan") { const rect = map.getBoundingClientRect(); view = panView(gesture.startView, gesture.startClient, { x: event.clientX, y: event.clientY }, { width: rect.width, height: rect.height }); applyView(); } else if (gesture.kind === "settlement") { const [offsetX, offsetY] = gesture.offset; gesture.settlement.x = Math.round((point[0] - offsetX) * 10) / 10; gesture.settlement.y = Math.round((point[1] - offsetY) * 10) / 10; gesture.node.setAttribute("transform", `translate(${gesture.settlement.x} ${gesture.settlement.y})`); updateRoads(gesture.settlement); } else if (gesture.kind === "river" && inside(point)) { const last = gesture.points.at(-1); if (Math.hypot(point[0] - last[0], point[1] - last[1]) >= 2) { gesture.points.push(point); renderRiverPreview(liveLayer, gesture.points); } } else if (gesture.kind === "brush" && inside(point)) { const last = gesture.stroke.points.at(-1); if (Math.hypot(point[0] - last[0], point[1] - last[1]) >= 2) { gesture.stroke.points.push(point); renderBrushPreview(liveLayer, gesture.stroke, world); } } });
+function finishGesture(event) { if (!gesture || event.pointerId !== gesture.pointerId) return; const completed = gesture; gesture = null; if (completed.kind === "brush") { if (completed.stroke.type === "mountainRange") commitMountainStroke(world, completed.stroke); else if (completed.stroke.type === "forest") commitForestStroke(world, completed.stroke); else { world.brushStrokes.push(completed.stroke); removeUnsupportedMountedSymbols(world, completed.stroke); removeUnsupportedForestSymbols(world, completed.stroke); } } else if (completed.kind === "river") { if (completed.points.length >= 2) addRiver(world, completed.points); else setStatus("River needs at least two points."); } if (completed.kind !== "pan") { syncJSON(); refreshMap(); } setStatus(completed.kind === "river" && completed.points.length >= 2 ? "River added." : modeHelp[mode] ?? ""); }
 map.addEventListener("pointerup", finishGesture); map.addEventListener("pointercancel", finishGesture); map.addEventListener("pointerleave", () => { if (!gesture) brushOutline.setAttribute("visibility", "hidden"); });
 map.addEventListener("wheel", event => { event.preventDefault(); const [x, y] = mapPoint(event); const factor = event.deltaY < 0 ? .85 : 1.15; const next = zoomView(view, factor, { x, y }); if (next.width >= 40 && next.width <= 100000) { view = next; applyView(); } }, { passive: false });
 document.addEventListener("keydown", event => { if (event.key === "Escape" && pendingPlacement) { event.preventDefault(); cancelPlacement(); } });

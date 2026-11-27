@@ -9,6 +9,11 @@ import {
   moveRoadPoint,
   removeRoadPoint,
   insertRoadPoint,
+  addRiver,
+  addRiverPoint,
+  insertRiverPoint,
+  moveRiverPoint,
+  removeRiverPoint,
 } from "../src/editor-actions.js";
 
 function world() {
@@ -100,4 +105,38 @@ test("road bend points insert at the clicked segment position", () => {
   const index = insertRoadPoint(map, roadId, [200, 150]);
   assert.equal(index, 0);
   assert.deepEqual(map.roads[0].points, [[200, 150]]);
+});
+
+test("river creation rejects single points and duplicates positive, negative, and mixed points", () => {
+  const map = world();
+  map.rivers = [];
+  assert.throws(() => addRiver(map, [[0, 0]]), /at least two/);
+  const river = addRiver(map, [[-100, -50], [0, 20], [100, -30]]);
+  assert.equal(river.id, "river-1");
+  assert.deepEqual(river.points, [[-100, -50], [0, 20], [100, -30]]);
+});
+
+test("river bend points can be added, inserted, moved, and removed", () => {
+  const map = world();
+  map.rivers = [{ id: "river-1", points: [[0, 0], [100, 0], [200, 50]] }];
+  addRiverPoint(map, "river-1", [300, 100]);
+  assert.deepEqual(map.rivers[0].points.at(-1), [300, 100]);
+  const inserted = insertRiverPoint(map, "river-1", [50, 25]);
+  assert.equal(inserted, 1);
+  moveRiverPoint(map, "river-1", inserted, [60, 30]);
+  assert.deepEqual(map.rivers[0].points[inserted], [60, 30]);
+  removeRiverPoint(map, "river-1", inserted);
+  assert.deepEqual(map.rivers[0].points, [[0, 0], [100, 0], [200, 50], [300, 100]]);
+});
+
+test("river deletion and duplication preserve exact geometry and stable identities", () => {
+  const map = world();
+  map.rivers = [{ id: "river-1", points: [[-50, 10], [20, 30], [90, -40]] }];
+  const copies = duplicateObjects(map, [{ kind: "river", id: "river-1" }], [20, 20]);
+  assert.equal(copies[0].kind, "river");
+  assert.equal(map.rivers.length, 2);
+  assert.notEqual(map.rivers[1].id, "river-1");
+  assert.deepEqual(map.rivers[1].points, [[-30, 30], [40, 50], [110, -20]]);
+  deleteObjects(map, [{ kind: "river", id: "river-1" }]);
+  assert.equal(map.rivers.length, 1);
 });

@@ -47,9 +47,9 @@ const deleteButton = controls.querySelector("#delete-selection");
 const clearButton = controls.querySelector("#clear-selection");
 
 function worldData() {
-  if (!dataOutput.value) return { settlements: [], mountains: [], forests: [], roads: [] };
+  if (!dataOutput.value) return { settlements: [], mountains: [], forests: [], roads: [], rivers: [] };
   try { return JSON.parse(dataOutput.value); }
-  catch { return { settlements: [], mountains: [], forests: [], roads: [] }; }
+  catch { return { settlements: [], mountains: [], forests: [], roads: [], rivers: [] }; }
 }
 function unique(items) { return [...new Map(items.map(item => [`${item.kind}:${item.id}`, item])).values()]; }
 function nodeFor(item) {
@@ -57,6 +57,7 @@ function nodeFor(item) {
   if (item.kind === "mountain") return map.querySelector(`.mountain-symbol[data-object-id="${CSS.escape(item.id)}"]`);
   if (item.kind === "forest") return map.querySelector(`.forest-object[data-object-id="${CSS.escape(item.id)}"]`);
   if (item.kind === "road") return map.querySelector(`.road-layer [data-road-id="${CSS.escape(item.id)}"]`);
+  if (item.kind === "river") return map.querySelector(`.river-path[data-river-id="${CSS.escape(item.id)}"]`);
   return null;
 }
 function settleSelections(world) {
@@ -64,11 +65,13 @@ function settleSelections(world) {
   const mountainIds = new Set(world.mountains.map(item => item.id));
   const forestIds = new Set(world.forests.map(item => item.id));
   const roadIds = new Set(world.roads.map(item => item.id));
+  const riverIds = new Set(world.rivers.map(item => item.id));
   selected = selected.filter(item =>
     (item.kind === "settlement" && ids.has(item.id)) ||
     (item.kind === "mountain" && mountainIds.has(item.id)) ||
     (item.kind === "forest" && forestIds.has(item.id)) ||
-    (item.kind === "road" && roadIds.has(item.id))
+    (item.kind === "road" && roadIds.has(item.id)) ||
+    (item.kind === "river" && riverIds.has(item.id))
   );
 }
 function updateToolbar() {
@@ -93,6 +96,8 @@ function refreshSelection() {
 function clearSelection(message) {
   selected = [];
   document.dispatchEvent(new CustomEvent("road-selected", { detail: { id: null } }));
+  document.dispatchEvent(new CustomEvent("river-selected", { detail: { id: null } }));
+  document.dispatchEvent(new CustomEvent("river-selected", { detail: { id: null } }));
   map.querySelectorAll(".is-selected").forEach(node => node.classList.remove("is-selected"));
   updateToolbar();
   if (message) status.textContent = message;
@@ -134,10 +139,12 @@ function selectionFromTarget(event) {
   const mountain = path.find(node => node instanceof Element && node.matches(".mountain-symbol[data-object-id]"));
   const forest = path.find(node => node instanceof Element && node.matches(".forest-object[data-object-id]"));
   const road = path.find(node => node instanceof Element && node.matches(".road-layer [data-road-id]"));
+  const river = path.find(node => node instanceof Element && node.matches(".river-path[data-river-id]"));
   if (settlement) return { kind: "settlement", id: settlement.dataset.id };
   if (mountain) return { kind: "mountain", id: mountain.dataset.objectId };
   if (forest) return { kind: "forest", id: forest.dataset.objectId };
   if (road) return { kind: "road", id: road.dataset.roadId };
+  if (river) return { kind: "river", id: river.dataset.riverId };
   return null;
 }
 function startBoxSelection(event) {
@@ -180,6 +187,15 @@ function finishBox(event) {
   for (const forest of world.forests) {
     if (intersects(forest, 18, 22)) hits.push({ kind: "forest", id: forest.id });
   }
+  for (const river of world.rivers) {
+    const node = map.querySelector(`.river-path[data-river-id="${CSS.escape(river.id)}"]`);
+    if (!node) continue;
+    const riverBox = node.getBBox();
+    if (riverBox.x + riverBox.width >= box.x && riverBox.x <= box.x + box.width &&
+        riverBox.y + riverBox.height >= box.y && riverBox.y <= box.y + box.height) {
+      hits.push({ kind: "river", id: river.id });
+    }
+  }
   selected = unique(hits);
   refreshSelection();
   status.textContent = selected.length ? `${selected.length} objects selected.` : "Nothing selected.";
@@ -191,9 +207,12 @@ function startDrag(event, target) {
   const point = mapPoint(event);
   const world = worldData();
   const originals = selected.map(item => {
-    const collection = item.kind === "settlement" ? "settlements" : item.kind === "mountain" ? "mountains" : item.kind === "forest" ? "forests" : null;
+    const collection = item.kind === "settlement" ? "settlements" : item.kind === "mountain" ? "mountains" : item.kind === "forest" ? "forests" : item.kind === "river" ? "rivers" : null;
     const object = collection ? world[collection].find(value => value.id === item.id) : null;
-    return object ? { item, collection, x: object.x, y: object.y } : null;
+    return object ? item.kind === "river"
+      ? { item, collection, points: (object.points ?? []).map(point => [...point]) }
+      : { item, collection, x: object.x, y: object.y }
+      : null;
   }).filter(Boolean);
   if (!originals.length) return;
   dragGesture = { pointerId: event.pointerId, start: point, originals };
@@ -209,6 +228,12 @@ function updateDrag(event) {
   for (const original of dragGesture.originals) {
     const object = world[original.collection].find(value => value.id === original.item.id);
     if (!object) continue;
+    if (original.item.kind === "river") {
+      object.points = original.points.map(([px, py]) => [Math.round((px + dx) * 10) / 10, Math.round((py + dy) * 10) / 10]);
+      const node = nodeFor(original.item);
+      node?.setAttribute("d", object.points.map(([px, py], index) => `${index ? "L" : "M"} ${px} ${py}`).join(" "));
+      continue;
+    }
     object.x = Math.round((original.x + dx) * 10) / 10;
     object.y = Math.round((original.y + dy) * 10) / 10;
     if (object.sourceId) {
@@ -243,7 +268,7 @@ function updateRoadPaths(world) {
 }
 map.addEventListener("pointerdown", event => {
   if (event.button !== 0 || map.dataset.mode !== "select") return;
-  if (event.composedPath().some(node => node instanceof Element && node.matches(".road-bend-handle"))) return;
+  if (event.composedPath().some(node => node instanceof Element && node.matches(".road-bend-handle, .river-bend-handle"))) return;
   const target = selectionFromTarget(event);
   if (target) {
     const alreadySelected = selected.some(item => item.kind === target.kind && item.id === target.id);
@@ -251,6 +276,7 @@ map.addEventListener("pointerdown", event => {
     else if (target.kind === "road") selected = [target];
     else selected = selected.some(item => item.kind === target.kind && item.id === target.id) ? selected : [target];
     document.dispatchEvent(new CustomEvent("road-selected", { detail: { id: target.kind === "road" ? target.id : null } }));
+    document.dispatchEvent(new CustomEvent("river-selected", { detail: { id: target.kind === "river" ? target.id : null } }));
     if (target.kind === "road" && alreadySelected && !event.shiftKey) {
       document.dispatchEvent(new CustomEvent("road-click", { detail: { id: target.id, point: mapPoint(event) } }));
     }
