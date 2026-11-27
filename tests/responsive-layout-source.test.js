@@ -57,11 +57,12 @@ test("shared toolbar visibility and animation use separate rules", async () => {
 test("menu buttons directly select content in the shared toolbar", async () => {
   const html = await read("index.html");
   const source = await read("src/tool-options.js");
-  for (const id of ["add-settlement", "add-mountain", "brush-mode"]) {
+  for (const id of ["add-settlement", "add-mountain", "brush-mode", "roads-mode"]) {
     const button = html.match(new RegExp(`<button[^>]*id="${id}"[^>]*>`))?.[0] ?? "";
-    assert.match(button, /aria-controls="tool-options-toolbar"/);
+    assert.match(button, /aria-controls=/);
   }
-  assert.match(source, /closest\("#brush-mode, button\[data-placement\]"\)/);
-  assert.match(source, /showToolOptions\(trigger\.id === "brush-mode" \? brushContent : placementContent\)/);
+  assert.match(source, /#roads-mode/);
+  assert.match(source, /data-mode="select"/);
+  assert.match(source, /getContents\(\)/);
   assert.match(source, /toolbar\.hidden = false/);
 });

@@ -62,6 +62,8 @@ function initialise() {
   map.addEventListener("pointercancel", () => setTimeout(finishAction));
   applyButton.addEventListener("click", () => { beginAction(); setTimeout(finishAction); }, true);
   document.querySelector("#load").addEventListener("click", () => { beginAction(); setTimeout(finishAction); }, true);
+  document.addEventListener("history-action-start", beginAction);
+  document.addEventListener("history-action-finish", finishAction);
   undoButton.addEventListener("click", () => restore(history.undo(), "Undid last edit."));
   redoButton.addEventListener("click", () => restore(history.redo(), "Redid last edit."));
   limitInput.addEventListener("change", () => {

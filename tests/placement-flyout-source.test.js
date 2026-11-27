@@ -52,6 +52,6 @@ test("placement content switches context and closes safely", async () => {
   assert.match(source, /settlement \? "Place settlement" : "Place mountain"/);
   assert.match(source, /showToolOptions\(placementFlyout\)/);
   assert.match(source, /hideToolOptions\(placementFlyout\)/);
-  assert.match(source, /MutationObserver/);
+  assert.doesNotMatch(source, /MutationObserver/);
   assert.match(source, /event\.key === "Escape"/);
 });

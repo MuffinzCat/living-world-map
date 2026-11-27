@@ -28,7 +28,7 @@ function clamp(value, minimum, maximum) { return Math.max(minimum, Math.min(maxi
 function setStatus(message) { status.textContent = message; }
 function applyView() { map.setAttribute("viewBox", `${view.x} ${view.y} ${view.width} ${view.height}`); }
 function resetView() { view = { x: 0, y: 0, width: world.canvas.width, height: world.canvas.height }; applyView(); }
-function syncJSON() { dataOutput.value = serialiseWorld(world); lastJSON = dataOutput.value; }
+function syncJSON() { dataOutput.value = serialiseWorld(world); lastJSON = dataOutput.value; document.dispatchEvent(new CustomEvent("world-data-changed")); }
 function rounded([x, y]) { return [Math.round(x * 10) / 10, Math.round(y * 10) / 10]; }
 function inside([x, y]) { return x >= 0 && y >= 0 && x <= world.canvas.width && y <= world.canvas.height; }
 function mapPoint(event) { const point = map.createSVGPoint(); point.x = event.clientX; point.y = event.clientY; const transformed = point.matrixTransform(map.getScreenCTM().inverse()); return rounded([transformed.x, transformed.y]); }
@@ -43,7 +43,17 @@ function cancelPlacement(message = "Placement cancelled.") { if (!pendingPlaceme
 function ensureCurrentJSON() { return dataOutput.value === lastJSON || applyJSON(false); }
 function applyJSON(reset = true) { try { world = validateWorld(JSON.parse(dataOutput.value)); pendingPlacement = null; updatePlacementUI(); syncJSON(); if (reset) resetView(); refreshMap(); setMode("select"); setStatus(`JSON applied. ${modeHelp.select}`); return true; } catch (error) { setStatus(`Could not apply JSON: ${error.message}`); return false; } }
 function download(content, type, filename) { const url = URL.createObjectURL(new Blob([content], { type })); const link = document.createElement("a"); link.href = url; link.download = filename; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
-function updateRoads(settlement) { map.querySelectorAll(".road-layer line").forEach(line => { if (line.dataset.from === settlement.id) { line.setAttribute("x1", settlement.x); line.setAttribute("y1", settlement.y); } if (line.dataset.to === settlement.id) { line.setAttribute("x2", settlement.x); line.setAttribute("y2", settlement.y); } }); }
+function updateRoads(settlement) {
+  const settlements = new Map(world.settlements.map(item => [item.id, item]));
+  for (const road of world.roads) {
+    if (road.from !== settlement.id && road.to !== settlement.id) continue;
+    const from = settlements.get(road.from);
+    const to = settlements.get(road.to);
+    const path = map.querySelector(`.road-layer [data-road-id="${CSS.escape(road.id)}"]`);
+    const points = [[from.x, from.y], ...(road.points ?? []), [to.x, to.y]];
+    path?.setAttribute("d", points.map(([x, y], index) => `${index ? "L" : "M"} ${x} ${y}`).join(" "));
+  }
+}
 function settlementId(name) { const base = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "settlement"; let id = base; let suffix = 2; while (world.settlements.some(item => item.id === id)) id = `${base}-${suffix++}`; return id; }
 function beginSettlementPlacement() { if (!ensureCurrentJSON()) return; const name = settlementName.value.trim(); if (!name) { setStatus("Enter a settlement name before placing it."); return; } pendingPlacement = { kind: "settlement", name, type: settlementType.value }; updatePlacementUI(); setMode("placement"); setStatus(`Click the map to place ${name}. Press Escape or Cancel placement to stop.`); }
 function beginMountainPlacement() { if (!ensureCurrentJSON()) return; pendingPlacement = { kind: "mountain" }; updatePlacementUI(); setMode("placement"); setStatus("Click the map to place a mountain. Press Escape or Cancel placement to stop."); }

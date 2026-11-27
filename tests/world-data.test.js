@@ -16,10 +16,10 @@ function validWorld() {
       { id: "oak", name: "Oak Haven", type: "town", x: 100, y: 120 },
       { id: "ford", name: "Riverford", type: "village", x: 300, y: 280 }
     ],
-    roads: [{ from: "oak", to: "ford" }],
+    roads: [{ id: "road-1", from: "oak", to: "ford", points: [] }],
     rivers: [{ points: [[10, 10], [20, 20]] }],
-    forests: [{ x: 50, y: 60 }],
-    mountains: [{ x: 80, y: 90 }],
+    forests: [{ id: "forest-1", x: 50, y: 60 }],
+    mountains: [{ id: "mountain-1", x: 80, y: 90 }],
     mountainRanges: [{ points: [[100, 100], [150, 140]], size: 32 }],
     brushStrokes: [{ type: "water", size: 40, points: [[200, 200], [220, 220]] }],
     notes: "A valid world."
@@ -86,6 +86,33 @@ test("rejects roads with missing endpoints", () => {
   const world = validWorld();
   world.roads[0].to = "missing";
   assert.throws(() => validateWorld(world), /existing settlement IDs/);
+});
+
+test("migrates stable forest, mountain, and road identities and bend points", () => {
+  const world = migrateWorld({
+    canvas: { width: 400, height: 300 },
+    settlements: [
+      { id: "oak", name: "Oak", type: "town", x: 100, y: 100 },
+      { id: "ford", name: "Ford", type: "village", x: 300, y: 200 },
+    ],
+    forests: [{ x: 30, y: 40 }],
+    mountains: [{ x: 50, y: 60 }],
+    roads: [{ from: "oak", to: "ford", points: [[200, 150]] }],
+  });
+  assert.equal(world.forests[0].id, "forest-1");
+  assert.equal(world.mountains[0].id, "mountain-1");
+  assert.equal(world.roads[0].id, "road-1");
+  assert.deepEqual(world.roads[0].points, [[200, 150]]);
+});
+
+test("rejects malformed road bend points and duplicate road connections", () => {
+  const malformed = validWorld();
+  malformed.roads[0].points = [[200]];
+  assert.throws(() => validateWorld(malformed), /\[x, y\] pair/);
+
+  const duplicate = validWorld();
+  duplicate.roads.push({ id: "reverse", from: "ford", to: "oak", points: [] });
+  assert.throws(() => validateWorld(duplicate), /duplicates an existing road/);
 });
 
 test("rejects malformed points and invalid brush sizes", () => {
