@@ -199,7 +199,7 @@ If a required check cannot be completed, state:
 
 Use the repository’s existing dependency-free validation process.
 
-Run the applicable focused tests during implementation. Before completion, normally run:
+Run the applicable focused tests during implementation. Before completion, always run the following commands. For documentation-only changes, `git diff --check` alone is sufficient.
 
 ```sh
 find src tests -name '*.js' -print0 | xargs -0 -n1 node --check
@@ -224,7 +224,7 @@ Perform all work inside the main local repository folder.
 
 Do not create or use Git worktrees, secondary clones, temporary repositories, sibling working directories, or other out-of-folder development arrangements without explicit approval.
 
-Keep temporary validation files in an appropriate ignored location inside the repository and remove them when finished.
+Keep temporary validation files under `.tmp/` at the repository root and delete them before committing. Do not modify `.gitignore` to add new scratch locations.
 
 Before changing branches, ensure existing work is committed, intentionally stashed, or otherwise protected. Never discard unrelated local work.
 
@@ -252,7 +252,7 @@ After committing, inspect the commit and confirm it contains no unrelated change
 
 Pull requests must:
 
-- Reference the relevant issue
+- Reference the relevant issue. If the approved task has no issue, state the task description verbatim in the pull request body instead of an issue reference. Do not link to the approving conversation or session.
 - Explain the actual behaviour change
 - Describe important implementation decisions
 - List validation genuinely performed
