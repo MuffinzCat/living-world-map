@@ -132,6 +132,14 @@ test("river bend points can be added, inserted, moved, and removed", () => {
   assert.deepEqual(map.rivers[0].points, [[0, 0], [100, 0], [200, 50], [300, 100]]);
 });
 
+test("river end points can be moved exactly like middle bend points", () => {
+  const map = world();
+  map.rivers = [{ id: "river-1", points: [[-100, -50], [0, 20], [100, -30]] }];
+  moveRiverPoint(map, "river-1", 0, [-120, -70]);
+  moveRiverPoint(map, "river-1", 2, [130, -10]);
+  assert.deepEqual(map.rivers[0].points, [[-120, -70], [0, 20], [130, -10]]);
+});
+
 test("river deletion and duplication preserve exact geometry and stable identities", () => {
   const map = world();
   map.rivers = [{ id: "river-1", points: [[-50, 10], [20, 30], [90, -40]] }];

@@ -123,7 +123,9 @@ document.addEventListener("river-selected", event => {
   selectedRiverId = event.detail.id;
   selectedPointIndex = null;
   refreshHandles();
-  if (selectedRiverId) showToolOptions(riverControls, riverButton);
+  if (selectedRiverId) {
+    showToolOptions(riverControls, document.querySelector('[data-mode="select"]'));
+  }
 });
 
 document.addEventListener("river-click", event => {
@@ -140,16 +142,6 @@ map.addEventListener("pointerdown", event => {
   const handle = event.composedPath().find(node => node instanceof Element && node.matches(".river-bend-handle"));
   if (!handle) return;
   const index = Number(handle.dataset.bendIndex);
-  const river = worldData().rivers.find(item => item.id === selectedRiverId);
-  if (modeSelect.value === "line" && river && (index === 0 || index === river.points.length - 1)) {
-    document.dispatchEvent(new CustomEvent("river-line-start", {
-      detail: { point: river.points[index], riverId: river.id, endIndex: index }
-    }));
-    event.preventDefault();
-    event.stopPropagation();
-    status.textContent = "Line mode: select an end point to continue.";
-    return;
-  }
   bendGesture = { pointerId: event.pointerId, index };
   selectedPointIndex = bendGesture.index;
   document.dispatchEvent(new CustomEvent("history-action-start"));
