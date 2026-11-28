@@ -42,6 +42,7 @@ test("road click adds a bend and deselection clears bend handles", async () => {
   assert.match(selectionSource, /road-click/);
   assert.match(selectionSource, /road-selected/);
   assert.match(selectionSource, /detail: \{ id: null \}/);
+  assert.match(roadSource, /showToolOptions\(roadsControls, document\.querySelector\('\[data-mode="select"\]'\)\)/);
 });
 
 test("road cancellation and Escape return to Move map and clear road state", async () => {
@@ -51,4 +52,14 @@ test("road cancellation and Escape return to Move map and clear road state", asy
   assert.match(source, /selectedPointIndex = null/);
   assert.match(source, /\[data-mode="pan"\].*\.click\(\)/);
   assert.match(source, /event\.key === "Escape"/);
+});
+
+test("river selection matches road edit state and all handles remain movable", async () => {
+  const riverSource = await read("src/river-controls.js");
+  const selectionSource = await read("src/selection-controls.js");
+  assert.match(riverSource, /showToolOptions\(riverControls, document\.querySelector\('\[data-mode="select"\]'\)\)/);
+  assert.match(riverSource, /moveRiverPoint/);
+  assert.doesNotMatch(riverSource, /river-line-start/);
+  assert.match(selectionSource, /river-click/);
+  assert.match(selectionSource, /clickTarget/);
 });

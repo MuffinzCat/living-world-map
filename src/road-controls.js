@@ -139,7 +139,9 @@ document.addEventListener("road-selected", event => {
   selectedRoadId = event.detail.id;
   selectedPointIndex = null;
   refreshHandles();
-  if (selectedRoadId) showToolOptions(roadsControls, roadsButton);
+  if (selectedRoadId) {
+    showToolOptions(roadsControls, document.querySelector('[data-mode="select"]'));
+  }
 });
 document.addEventListener("road-click", event => {
   if (event.detail.id !== selectedRoadId) return;

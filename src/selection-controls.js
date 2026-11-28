@@ -202,7 +202,8 @@ function finishBox(event) {
 }
 function startDrag(event, target) {
   if (event.shiftKey) return;
-  if (!selected.some(item => item.kind === target.kind && item.id === target.id)) selected = [target];
+  const alreadySelected = selected.some(item => item.kind === target.kind && item.id === target.id);
+  if (!alreadySelected) selected = [target];
   refreshSelection();
   const point = mapPoint(event);
   const world = worldData();
@@ -215,8 +216,9 @@ function startDrag(event, target) {
       : null;
   }).filter(Boolean);
   if (!originals.length) return;
-  dragGesture = { pointerId: event.pointerId, start: point, originals };
-  document.dispatchEvent(new CustomEvent("history-action-start"));
+  const clickTarget = alreadySelected && target.kind === "river" ? target : null;
+  dragGesture = { pointerId: event.pointerId, start: point, originals, moved: false, historyStarted: !clickTarget, clickTarget };
+  if (dragGesture.historyStarted) document.dispatchEvent(new CustomEvent("history-action-start"));
   map.setPointerCapture(event.pointerId);
 }
 function updateDrag(event) {
@@ -224,6 +226,14 @@ function updateDrag(event) {
   const [x, y] = mapPoint(event);
   const dx = x - dragGesture.start[0];
   const dy = y - dragGesture.start[1];
+  if (!dragGesture.moved && (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1)) {
+    dragGesture.moved = true;
+    if (!dragGesture.historyStarted) {
+      dragGesture.historyStarted = true;
+      document.dispatchEvent(new CustomEvent("history-action-start"));
+    }
+  }
+  if (!dragGesture.moved) return;
   const world = worldData();
   for (const original of dragGesture.originals) {
     const object = world[original.collection].find(value => value.id === original.item.id);
@@ -249,11 +259,18 @@ function updateDrag(event) {
 }
 function finishDrag(event) {
   if (!dragGesture || event.pointerId !== dragGesture.pointerId) return;
+  const completed = dragGesture;
   dragGesture = null;
-  document.dispatchEvent(new CustomEvent("history-action-finish"));
-  document.dispatchEvent(new CustomEvent("history-restore", { detail: { state: dataOutput.value } }));
-  status.textContent = "Selected objects moved.";
-  refreshSelection();
+  if (!completed.moved && completed.clickTarget) {
+    document.dispatchEvent(new CustomEvent("river-click", {
+      detail: { id: completed.clickTarget.id, point: mapPoint(event) },
+    }));
+  } else if (completed.historyStarted) {
+    document.dispatchEvent(new CustomEvent("history-action-finish"));
+    document.dispatchEvent(new CustomEvent("history-restore", { detail: { state: dataOutput.value } }));
+    status.textContent = "Selected objects moved.";
+    refreshSelection();
+  }
 }
 function updateRoadPaths(world) {
   const settlements = new Map(world.settlements.map(item => [item.id, item]));

@@ -32,6 +32,7 @@ test("undo and redo restore world data without resetting the viewport", async ()
   assert.match(historyControls, /new CustomEvent\("history-restore"/);
   assert.match(main, /addEventListener\("history-restore"/);
   assert.match(main, /applyJSON\(false\)/);
+  assert.match(main, /if \(reset\) \{ setMode\("select"\); setStatus/);
   assert.doesNotMatch(historyControls, /applyButton\.click\(\)/);
 });
 

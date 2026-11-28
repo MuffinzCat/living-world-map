@@ -67,7 +67,7 @@ function setMode(next, trigger = null) {
 }
 function cancelPlacement(message = "Placement cancelled.") { if (!pendingPlacement) return; pendingPlacement = null; updatePlacementUI(); setMode("pan"); setStatus(`${message} ${modeHelp.pan}`); }
 function ensureCurrentJSON() { return dataOutput.value === lastJSON || applyJSON(false); }
-function applyJSON(reset = true) { try { world = validateWorld(JSON.parse(dataOutput.value)); pendingPlacement = null; updatePlacementUI(); syncJSON(); if (reset) resetView(); refreshMap(); setMode("select"); setStatus(`JSON applied. ${modeHelp.select}`); return true; } catch (error) { setStatus(`Could not apply JSON: ${error.message}`); return false; } }
+function applyJSON(reset = true) { try { world = validateWorld(JSON.parse(dataOutput.value)); pendingPlacement = null; updatePlacementUI(); syncJSON(); if (reset) resetView(); refreshMap(); if (reset) { setMode("select"); setStatus(`JSON applied. ${modeHelp.select}`); } return true; } catch (error) { setStatus(`Could not apply JSON: ${error.message}`); return false; } }
 function download(content, type, filename) { const url = URL.createObjectURL(new Blob([content], { type })); const link = document.createElement("a"); link.href = url; link.download = filename; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
 function updateRoads(settlement) {
   const settlements = new Map(world.settlements.map(item => [item.id, item]));
