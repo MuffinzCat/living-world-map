@@ -16,6 +16,7 @@ import {
   removeRiverPoint,
   riverDrawSpacing,
   extendRiverFromEnd,
+  commitRiverLine,
 } from "../src/editor-actions.js";
 
 function world() {
@@ -147,6 +148,7 @@ test("river draw smoothing reduces draw spacing at higher settings", () => {
   assert.equal(riverDrawSpacing(0), 2);
   assert.equal(riverDrawSpacing(50), 11);
   assert.equal(riverDrawSpacing(100), 20);
+  assert.equal(riverDrawSpacing(200), 38);
   assert.ok(riverDrawSpacing(100) > riverDrawSpacing(0));
 });
 
@@ -158,4 +160,17 @@ test("line continuation only extends from river end nodes", () => {
   extendRiverFromEnd(map, "river-1", 0, [-100, -50]);
   assert.deepEqual(map.rivers[0].points, [[-100, -50], [0, 0], [100, 0], [200, 50], [300, 100]]);
   assert.throws(() => extendRiverFromEnd(map, "river-1", 2, [400, 100]), /end node/);
+});
+
+test("river line commits exactly two points or continues one end node", () => {
+  const map = world();
+  map.rivers = [];
+  const standalone = commitRiverLine(map, { points: [[-100, 20], [80, -40]] });
+  assert.deepEqual(standalone.points, [[-100, 20], [80, -40]]);
+  const continued = commitRiverLine(map, {
+    points: [[80, -40], [180, 10]],
+    sourceRiverId: standalone.id,
+    sourceEndIndex: 1
+  });
+  assert.deepEqual(continued.points, [[-100, 20], [80, -40], [180, 10]]);
 });
