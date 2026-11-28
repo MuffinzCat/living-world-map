@@ -51,3 +51,17 @@ export function renderBrushPreview(layer, stroke, world) {
     });
   }
 }
+
+export function renderRiverPreview(layer, points) {
+  layer.replaceChildren();
+  if (!Array.isArray(points) || points.length < 1) return;
+  const path = layer.ownerDocument.createElementNS(layer.namespaceURI, "path");
+  path.setAttribute("class", "live-river-preview");
+  path.setAttribute("d", points.map(([x, y], index) => `${index ? "L" : "M"} ${x} ${y}`).join(" "));
+  path.setAttribute("fill", "none");
+  path.setAttribute("stroke", "#477f8a");
+  path.setAttribute("stroke-width", "7");
+  path.setAttribute("stroke-linecap", "round");
+  path.setAttribute("stroke-linejoin", "round");
+  layer.append(path);
+}

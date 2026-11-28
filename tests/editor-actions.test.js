@@ -9,6 +9,14 @@ import {
   moveRoadPoint,
   removeRoadPoint,
   insertRoadPoint,
+  addRiver,
+  addRiverPoint,
+  insertRiverPoint,
+  moveRiverPoint,
+  removeRiverPoint,
+  riverDrawSpacing,
+  extendRiverFromEnd,
+  commitRiverLine,
 } from "../src/editor-actions.js";
 
 function world() {
@@ -100,4 +108,69 @@ test("road bend points insert at the clicked segment position", () => {
   const index = insertRoadPoint(map, roadId, [200, 150]);
   assert.equal(index, 0);
   assert.deepEqual(map.roads[0].points, [[200, 150]]);
+});
+
+test("river creation rejects single points and duplicates positive, negative, and mixed points", () => {
+  const map = world();
+  map.rivers = [];
+  assert.throws(() => addRiver(map, [[0, 0]]), /at least two/);
+  const river = addRiver(map, [[-100, -50], [0, 20], [100, -30]]);
+  assert.equal(river.id, "river-1");
+  assert.deepEqual(river.points, [[-100, -50], [0, 20], [100, -30]]);
+});
+
+test("river bend points can be added, inserted, moved, and removed", () => {
+  const map = world();
+  map.rivers = [{ id: "river-1", points: [[0, 0], [100, 0], [200, 50]] }];
+  addRiverPoint(map, "river-1", [300, 100]);
+  assert.deepEqual(map.rivers[0].points.at(-1), [300, 100]);
+  const inserted = insertRiverPoint(map, "river-1", [50, 25]);
+  assert.equal(inserted, 1);
+  moveRiverPoint(map, "river-1", inserted, [60, 30]);
+  assert.deepEqual(map.rivers[0].points[inserted], [60, 30]);
+  removeRiverPoint(map, "river-1", inserted);
+  assert.deepEqual(map.rivers[0].points, [[0, 0], [100, 0], [200, 50], [300, 100]]);
+});
+
+test("river deletion and duplication preserve exact geometry and stable identities", () => {
+  const map = world();
+  map.rivers = [{ id: "river-1", points: [[-50, 10], [20, 30], [90, -40]] }];
+  const copies = duplicateObjects(map, [{ kind: "river", id: "river-1" }], [20, 20]);
+  assert.equal(copies[0].kind, "river");
+  assert.equal(map.rivers.length, 2);
+  assert.notEqual(map.rivers[1].id, "river-1");
+  assert.deepEqual(map.rivers[1].points, [[-30, 30], [40, 50], [110, -20]]);
+  deleteObjects(map, [{ kind: "river", id: "river-1" }]);
+  assert.equal(map.rivers.length, 1);
+});
+
+test("river draw smoothing reduces draw spacing at higher settings", () => {
+  assert.equal(riverDrawSpacing(0), 2);
+  assert.equal(riverDrawSpacing(50), 11);
+  assert.equal(riverDrawSpacing(100), 20);
+  assert.equal(riverDrawSpacing(200), 38);
+  assert.ok(riverDrawSpacing(100) > riverDrawSpacing(0));
+});
+
+test("line continuation only extends from river end nodes", () => {
+  const map = world();
+  map.rivers = [{ id: "river-1", points: [[0, 0], [100, 0], [200, 50]] }];
+  extendRiverFromEnd(map, "river-1", 2, [300, 100]);
+  assert.deepEqual(map.rivers[0].points, [[0, 0], [100, 0], [200, 50], [300, 100]]);
+  extendRiverFromEnd(map, "river-1", 0, [-100, -50]);
+  assert.deepEqual(map.rivers[0].points, [[-100, -50], [0, 0], [100, 0], [200, 50], [300, 100]]);
+  assert.throws(() => extendRiverFromEnd(map, "river-1", 2, [400, 100]), /end node/);
+});
+
+test("river line commits exactly two points or continues one end node", () => {
+  const map = world();
+  map.rivers = [];
+  const standalone = commitRiverLine(map, { points: [[-100, 20], [80, -40]] });
+  assert.deepEqual(standalone.points, [[-100, 20], [80, -40]]);
+  const continued = commitRiverLine(map, {
+    points: [[80, -40], [180, 10]],
+    sourceRiverId: standalone.id,
+    sourceEndIndex: 1
+  });
+  assert.deepEqual(continued.points, [[-100, 20], [80, -40], [180, 10]]);
 });

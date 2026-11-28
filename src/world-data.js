@@ -190,6 +190,18 @@ export function migrateWorld(input) {
   migrateObjectIds(world);
   world.mountainRanges = world.mountainRanges.map(item => ({ ...item, type: undefined })).map(({ type, ...item }) => item);
   world.brushStrokes = world.brushStrokes.map(stroke => ({ ...stroke, type: canonicalType(stroke?.type) }));
+  const riverIds = new Set();
+  world.rivers = world.rivers.map((river, index) => {
+    if (!isRecord(river)) return river;
+    if (Object.hasOwn(river, "id") && (typeof river.id !== "string" || !river.id.trim())) return river;
+    let id = typeof river.id === "string" ? river.id : `river-${index + 1}`;
+    if (!Object.hasOwn(river, "id")) {
+      let suffix = 2;
+      while (riverIds.has(id)) id = `river-${index + 1}-${suffix++}`;
+    }
+    riverIds.add(id);
+    return { ...river, id };
+  });
   const strokeIds = new Set();
   world.brushStrokes = world.brushStrokes.map((stroke, index) => {
     let id = typeof stroke.id === "string" && stroke.id.trim() ? stroke.id : `stroke-${index + 1}`;
@@ -334,8 +346,12 @@ export function validateWorld(input) {
   });
 
   world.rivers.forEach((item, index) => {
-    requireRecord(item, `rivers[${index}]`);
-    validatePoints(item.points, `rivers[${index}].points`);
+    const path = `rivers[${index}]`;
+    requireRecord(item, path);
+    requireString(item.id, `${path}.id`, { allowEmpty: false });
+    if (world.rivers.slice(0, index).some(river => river.id === item.id)) throw new Error(`${path}.id must be unique.`);
+    validatePoints(item.points, `${path}.points`);
+    if (item.points.length < 2) throw new Error(`${path}.points must contain at least two points.`);
   });
   for (const [collection, prefix] of [["forests", "forest"], ["mountains", "mountain"]]) {
     const ids = new Set();

@@ -21,7 +21,7 @@ function validWorld() {
       { id: "ford", name: "Riverford", type: "village", x: 300, y: 280 }
     ],
     roads: [{ id: "road-1", from: "oak", to: "ford", points: [] }],
-    rivers: [{ points: [[10, 10], [20, 20]] }],
+    rivers: [{ id: "river-1", points: [[10, 10], [20, 20]] }],
     forests: [{ id: "forest-1", x: 50, y: 60 }],
     mountains: [{ id: "mountain-1", x: 80, y: 90 }],
     mountainRanges: [],
@@ -118,6 +118,29 @@ test("rejects malformed road bend points and duplicate road connections", () => 
   const duplicate = validWorld();
   duplicate.roads.push({ id: "reverse", from: "ford", to: "oak", points: [] });
   assert.throws(() => validateWorld(duplicate), /duplicates an existing road/);
+});
+
+test("migrates river IDs without changing geometry", () => {
+  const world = migrateWorld({
+    canvas: { width: 400, height: 300 },
+    rivers: [{ points: [[-100, -50], [0, 20], [100, -30]] }]
+  });
+  assert.equal(world.rivers[0].id, "river-1");
+  assert.deepEqual(world.rivers[0].points, [[-100, -50], [0, 20], [100, -30]]);
+});
+
+test("rejects malformed river IDs and point arrays", () => {
+  const malformedId = validWorld();
+  malformedId.rivers[0].id = "";
+  assert.throws(() => validateWorld(malformedId), /rivers\[0\].id/);
+
+  const malformedPoints = validWorld();
+  malformedPoints.rivers[0].points = [[0, 0]];
+  assert.throws(() => validateWorld(malformedPoints), /at least two/);
+
+  const duplicate = validWorld();
+  duplicate.rivers.push({ id: duplicate.rivers[0].id, points: [[1, 1], [2, 2]] });
+  assert.throws(() => validateWorld(duplicate), /unique/);
 });
 
 test("rejects malformed points and invalid brush sizes", () => {
