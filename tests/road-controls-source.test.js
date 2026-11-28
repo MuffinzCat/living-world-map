@@ -42,6 +42,7 @@ test("road click adds a bend and deselection clears bend handles", async () => {
   assert.match(selectionSource, /road-click/);
   assert.match(selectionSource, /road-selected/);
   assert.match(selectionSource, /detail: \{ id: null \}/);
+  assert.match(roadSource, /showToolOptions\(roadsControls, document\.querySelector\('\[data-mode="select"\]'\)\)/);
 });
 
 test("road cancellation and Escape return to Move map and clear road state", async () => {
