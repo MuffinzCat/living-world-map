@@ -47,8 +47,7 @@ test("shared tool-options controller opens only one content panel", async () => 
   assert.match(source, /getContents\(\)\.forEach\(item => \{ item\.hidden = item !== content; \}\)/);
   assert.match(source, /#roads-mode/);
   assert.match(source, /data-mode="select"/);
-  assert.match(source, /button\[data-mode="select"\]/);
-  assert.doesNotMatch(source, /const trigger = event\.target\.closest\('\[data-mode="select"\]/);
+  assert.doesNotMatch(source, /document\.addEventListener\("click", event =>/);
   assert.match(source, /document\.addEventListener\("tool-change"/);
   assert.match(source, /hideToolOptions\(activeContent\)/);
   assert.match(source, /if \(!content \|\| activeContent !== content\) return/);

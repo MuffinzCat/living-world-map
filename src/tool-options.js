@@ -43,15 +43,6 @@ function syncTriggerStates() {
   });
 }
 
-document.addEventListener("click", event => {
-  const trigger = event.target.closest('button[data-mode="select"], button[data-mode="brush"], button[data-mode="pan"], [data-placement], #roads-mode');
-  if (!trigger) return;
-  const contentId = [...contentByTrigger].find(([selector]) => trigger.matches(selector))?.[1];
-  const content = contentId ? document.querySelector(`#${contentId}`) : null;
-  if (trigger.matches('[data-mode="pan"]')) hideToolOptions(activeContent);
-  else if (content) showToolOptions(content, trigger);
-});
-
 document.addEventListener("tool-change", event => {
   const { tool, trigger } = event.detail;
   if (tool === "pan") {
