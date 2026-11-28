@@ -124,12 +124,33 @@ jobs:
           else
             git commit -m "chore: update preview for PR #${PR_NUMBER} at ${SOURCE_SHA:0:7}"
           fi
-          git push origin main
+
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            git rebase origin/main
+
+            if git push origin main; then
+              echo "Preview repository published successfully."
+              exit 0
+            else
+              push_status=$?
+            fi
+
+            if [ "$attempt" -lt 5 ]; then
+              echo "Preview publication push lost a race (attempt ${attempt}/5, push exit ${push_status}); fetching and retrying."
+            fi
+          done
+
+          echo "Preview publication failed after 5 bounded fetch/rebase/push attempts." >&2
+          exit 1
 
       - name: Wait for GitHub Pages to serve this revision
         if: github.event.action != 'closed'
         run: |
           set -euo pipefail
+          response_file=$(mktemp)
+          trap 'rm -f "$response_file"' EXIT
+
           owner=$(printf '%s' "$REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
           pages_service=$(printf '%s%s' 'git' 'hub')
           top_level_domain=$(printf '%s%s' 'i' 'o')
@@ -138,11 +159,27 @@ jobs:
           short_sha="${SOURCE_SHA:0:7}"
 
           for attempt in $(seq 1 30); do
-            if curl --fail --silent --show-error "${preview_url}?revision=${SOURCE_SHA}" | grep --fixed-strings --quiet "$short_sha"; then
+            timestamp=$(date +%s%N)
+            attempt_url="${preview_url}?revision=${SOURCE_SHA}&attempt=${attempt}&timestamp=${timestamp}"
+
+            if curl --fail --silent --show-error --output "$response_file" "$attempt_url"; then
+              curl_status=0
+            else
+              curl_status=$?
+            fi
+
+            if [ "$curl_status" -ne 0 ]; then
+              echo "Pages request failed on attempt ${attempt}/30 (curl exit ${curl_status}); retrying."
+              sleep 10
+              continue
+            fi
+
+            if grep --fixed-strings --quiet "$short_sha" "$response_file"; then
               echo "GitHub Pages is serving revision ${short_sha}."
               exit 0
             fi
-            echo "Waiting for GitHub Pages (${attempt}/30)..."
+
+            echo "GitHub Pages is reachable, but the complete response does not contain revision ${short_sha} yet (${attempt}/30)."
             sleep 10
           done
           echo "GitHub Pages did not serve revision ${short_sha} within the verification window." >&2
@@ -162,7 +199,11 @@ jobs:
           published_at=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
           body=$(printf '%s\n## Pull request preview\n\n**Status: Ready**\n\n[Open the browser preview](%s)\n\n- Pull request: #%s\n- Branch: `%s`\n- Deployed revision: `%s`\n- Verified available: %s\n\nThe page badge shows the same revision. This preview updates with new commits and is removed when the pull request closes.' "$marker" "$preview_url" "$PR_NUMBER" "$SOURCE_BRANCH" "$short_sha" "$published_at")
           comment_id=$(gh api "repos/${REPOSITORY}/issues/${PR_NUMBER}/comments" --paginate --jq ".[] | select(.body | contains(\"${marker}\")) | .id" | head -n 1)
-          gh api --method PATCH "repos/${REPOSITORY}/issues/comments/${comment_id}" -f body="$body" >/dev/null
+          if [ -n "$comment_id" ]; then
+            gh api --method PATCH "repos/${REPOSITORY}/issues/comments/${comment_id}" -f body="$body" >/dev/null
+          else
+            gh api --method POST "repos/${REPOSITORY}/issues/${PR_NUMBER}/comments" -f body="$body" >/dev/null
+          fi
 
       - name: Mark preview as failed
         if: failure() && github.event.action != 'closed'
