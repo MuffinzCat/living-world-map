@@ -14,6 +14,8 @@ import {
   insertRiverPoint,
   moveRiverPoint,
   removeRiverPoint,
+  riverDrawSpacing,
+  extendRiverFromEnd,
 } from "../src/editor-actions.js";
 
 function world() {
@@ -139,4 +141,21 @@ test("river deletion and duplication preserve exact geometry and stable identiti
   assert.deepEqual(map.rivers[1].points, [[-30, 30], [40, 50], [110, -20]]);
   deleteObjects(map, [{ kind: "river", id: "river-1" }]);
   assert.equal(map.rivers.length, 1);
+});
+
+test("river draw smoothing reduces draw spacing at higher settings", () => {
+  assert.equal(riverDrawSpacing(0), 2);
+  assert.equal(riverDrawSpacing(50), 11);
+  assert.equal(riverDrawSpacing(100), 20);
+  assert.ok(riverDrawSpacing(100) > riverDrawSpacing(0));
+});
+
+test("line continuation only extends from river end nodes", () => {
+  const map = world();
+  map.rivers = [{ id: "river-1", points: [[0, 0], [100, 0], [200, 50]] }];
+  extendRiverFromEnd(map, "river-1", 2, [300, 100]);
+  assert.deepEqual(map.rivers[0].points, [[0, 0], [100, 0], [200, 50], [300, 100]]);
+  extendRiverFromEnd(map, "river-1", 0, [-100, -50]);
+  assert.deepEqual(map.rivers[0].points, [[-100, -50], [0, 0], [100, 0], [200, 50], [300, 100]]);
+  assert.throws(() => extendRiverFromEnd(map, "river-1", 2, [400, 100]), /end node/);
 });

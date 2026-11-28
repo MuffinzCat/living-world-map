@@ -34,6 +34,12 @@
       </div>
       <div id="river-controls" class="tool-options-content river-flyout" role="group" aria-label="River controls" hidden>
         <strong>Draw or edit rivers</strong>
+        <label for="river-mode-option">Mode
+          <select id="river-mode-option"><option value="draw">Draw</option><option value="line">Line</option></select>
+        </label>
+        <label for="river-smoothness">Smoothing
+          <input id="river-smoothness" type="range" min="0" max="100" step="5" value="50">
+        </label>
         <button id="cancel-river" type="button">Cancel</button>
         <span id="river-edit-controls" class="selection-edit" hidden>
           <button id="add-river-point" type="button">Add bend</button>
